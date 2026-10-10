@@ -1,0 +1,358 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User role enum (Role Based Access Control)
+enum Role {
+  SUPER_ADMIN
+  ADMIN_PARKING
+  OPERATOR
+  AUDITOR
+  CLIENT
+}
+
+enum AuditOperation {
+  CREATE
+  UPDATE
+  DELETE
+  VIEW
+  LOGIN
+  LOGOUT
+  LOGIN_FAILED
+  FORBIDDEN
+  PASSWORD_CHANGE
+  EXPORT
+}
+
+enum AuditResult {
+  SUCCESS
+  FAILURE
+}
+
+// Tipos de documento de identidad permitidos en Colombia
+enum DocumentType {
+  CEDULA                 // Cédula de ciudadanía
+  TARJETA_IDENTIDAD      // Tarjeta de identidad (menores de edad)
+  NIT                    // Número de Identificación Tributaria
+  PASAPORTE              // Pasaporte
+  PEP                    // Permiso Especial de Permanencia (personas extranjeras)
+}
+
+// User model for authentication
+model User {
+   id           String    @id @default(uuid())
+   email        String    @unique
+   passwordHash String
+   fullName     String
+  contactPhone String?
+  documentType  DocumentType?  // Tipo de documento de identidad
+  documentNumber String?       // Número de documento de identidad
+   role         Role      @default(OPERATOR)
+   isActive     Boolean   @default(true)
+   createdAt    DateTime  @default(now())
+   updatedAt    DateTime  @updatedAt
+
+   // Relations
+   vehicles     Vehicle[]
+   contracts    Contract[]
+   attendance   Attendance[]
+   payments     Payment[]
+   reports      Report[]
+  resetTokens  PasswordResetToken[]
+  screenPermissions UserScreenPermission[]
+  auditLogs    AuditLog[]
+
+  // Índices para mejor rendimiento
+   @@index([email])
+  @@index([contactPhone])
+   @@index([role])
+  @@index([documentNumber])
+}
+
+// Pantallas/módulos configurables para permisos de visualización
+model AppScreen {
+  key         String   @id
+  name        String
+  description String?
+  route       String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  rolePermissions RoleScreenPermission[]
+  userPermissions UserScreenPermission[]
+}
+
+// Permisos de visualización por rol
+model RoleScreenPermission {
+  id        String   @id @default(uuid())
+  role      Role
+  screenKey String
+  canView   Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  screen AppScreen @relation(fields: [screenKey], references: [key], onDelete: Cascade)
+
+  @@unique([role, screenKey])
+  @@index([role])
+  @@index([screenKey])
+}
+
+// Permisos de visualización explícitos por usuario
+model UserScreenPermission {
+  id        String   @id @default(uuid())
+  userId    String
+  screenKey String
+  canView   Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  screen AppScreen @relation(fields: [screenKey], references: [key], onDelete: Cascade)
+
+  @@unique([userId, screenKey])
+  @@index([userId])
+  @@index([screenKey])
+}
+
+// Parking Lot configuration
+model Parking {
+  id        String   @id @default(uuid())
+  name      String
+  address   String
+  capacity  Int
+  // Standard hourly rate (default fallback)
+  baseRate  Float    @default(0)
+  isActive  Boolean  @default(true)
+  vehicleTypes Json?
+  operationHours Json?
+
+  // Relations
+  tariffs   Tariff[]
+  tickets   Ticket[]
+  contracts Contract[]
+}
+
+// Tariffs per vehicle type
+model Tariff {
+  id          String   @id @default(uuid())
+  parkingId   String
+  parking     Parking  @relation(fields: [parkingId], references: [id])
+  vehicleType String   // CAR, MOTORCYCLE, VAN, etc.
+  baseRate    Float    // Initial cost
+  hourlyRate  Float    // Cost per hour
+  dayRate     Float?   // Cost per full day
+  nightRate   Float?   // Tarifa plana nocturna
+  nightStart  String?  // Hora de inicio de tarifa nocturna HH:mm
+  nightEnd    String?  // Hora de fin de tarifa nocturna HH:mm
+  flatRate    Float?   // Tarifa plana para eventos especiales
+
+  @@unique([parkingId, vehicleType])
+}
+
+model SystemConfig {
+  id                    String  @id
+  capacidadTotal        Int     @default(0)
+  capacidadPorTipo      Json?
+  horariosAtencion      Json?
+  minutosCortesia       Int     @default(0)
+  tarifasEspeciales     Json?
+  metodosPago           Json?
+  politicasFacturacion  Json?
+  mensajesOperativos    Json?
+  parametrosOperacion   Json?
+  seguridad             Json?
+  integraciones         Json?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}
+
+// Vehicle registry
+model Vehicle {
+   id        String   @id @default(uuid())
+   plate     String   @unique
+   type      String   // CAR, MOTORCYCLE
+   ownerId   String?
+   owner     User?    @relation(fields: [ownerId], references: [id])
+   tickets   Ticket[]
+
+   // Índices para mejor rendimiento
+   @@index([plate])
+   @@index([type])
+}
+
+// Entry ticket
+model Ticket {
+   id          String   @id @default(uuid())
+   ticketCode  String   @unique // Barcode/QR content
+   parkingId   String
+   parking     Parking  @relation(fields: [parkingId], references: [id])
+   vehicleId   String
+   vehicle     Vehicle  @relation(fields: [vehicleId], references: [id])
+   entryTime   DateTime @default(now())
+
+   status      String   @default("ACTIVE") // ACTIVE, PAID, CLOSED
+   qrUrl       String?
+
+   // Relations
+   exit        Exit?
+
+   // Índices para mejor rendimiento
+   @@index([ticketCode])
+  @@index([entryTime])
+   @@index([parkingId])
+   @@index([vehicleId])
+   @@index([status])
+}
+
+// Exit transaction
+model Exit {
+  id              String   @id @default(uuid())
+  ticketId        String   @unique
+  ticket          Ticket   @relation(fields: [ticketId], references: [id])
+  exitTime        DateTime @default(now())
+  durationMinutes Int
+  totalAmount     Float
+
+  paymentId       String?  @unique
+  payment         Payment? @relation(fields: [paymentId], references: [id])
+
+  @@index([exitTime])
+}
+
+// Payment transaction
+model Payment {
+  id        String   @id @default(uuid())
+  amount    Float
+  method    String   // CASH, CARD, ONLINE
+  status    String   // PENDING, COMPLETED, FAILED
+  userId    String?  // Who made the payment (if registered)
+  user      User?    @relation(fields: [userId], references: [id])
+  exit      Exit?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([status])
+  @@index([userId])
+}
+
+// Monthly Contracts
+model Contract {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  parkingId String
+  parking   Parking  @relation(fields: [parkingId], references: [id])
+  startDate DateTime
+  endDate   DateTime
+  status    String   // ACTIVE, EXPIRED, EXPIRING_SOON, PAYMENT_PENDING
+  planName  String   @default("Mensualidad")
+  monthlyFee Float   @default(0)
+  isRecurring Boolean @default(true)
+  lastPaymentDate DateTime?
+  nextPaymentDate DateTime?
+
+  alerts    ContractAlert[]
+
+  @@index([status])
+  @@index([endDate])
+  @@index([userId])
+  @@index([lastPaymentDate])
+}
+
+// Employee Attendance
+model Attendance {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  checkIn   DateTime
+  checkOut  DateTime?
+
+  @@index([userId])
+  @@index([checkIn])
+  @@index([checkOut])
+}
+
+// Reports metadata
+model Report {
+  id          String   @id @default(uuid())
+  generatedBy String
+  user        User     @relation(fields: [generatedBy], references: [id])
+  type        String   // DAILY, MONTHLY
+  url         String
+  createdAt   DateTime @default(now())
+}
+
+// Password reset tokens para recuperación de contraseña
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  email     String
+  tokenHash String   // Hash del código enviado al correo
+  expiresAt DateTime // Fecha de expiración del código
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([email])
+  @@index([expiresAt])
+}
+
+// Alertas ligadas a contratos de mensualidad
+model ContractAlert {
+  id         String   @id @default(uuid())
+  contractId String
+  contract   Contract @relation(fields: [contractId], references: [id])
+  alertType  String   // EXPIRING_SOON, EXPIRED, PAYMENT_PENDING
+  message    String
+  status     String   @default("PENDING") // PENDING, RESOLVED
+  createdAt  DateTime @default(now())
+  resolvedAt DateTime?
+
+  @@index([contractId])
+  @@index([status])
+  @@unique([contractId, alertType])
+}
+
+// Registro inmutable de auditoría para trazabilidad operativa y de seguridad.
+model AuditLog {
+  id               String         @id @default(uuid())
+  timestamp        DateTime       @default(now())
+  userId           String?
+  userEmail        String?
+  ipAddress        String?
+  userAgent        String?
+  operation        AuditOperation
+  entity           String
+  recordId         String?
+  previousValues   Json?
+  newValues        Json?
+  result           AuditResult
+  errorCode        String?
+  errorMessage     String?
+  endpoint         String?
+  method           String?
+  requestParams    Json?
+  responseTimeMs   Int?
+  metadata         Json?
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([timestamp])
+  @@index([userId])
+  @@index([operation])
+  @@index([entity])
+  @@index([recordId])
+  @@index([result])
+}

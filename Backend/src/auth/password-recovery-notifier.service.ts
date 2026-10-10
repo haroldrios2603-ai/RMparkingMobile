@@ -1,0 +1,96 @@
+/**
+ * Servicio que contiene la lógica de negocio para auth.
+ */
+import { Injectable, Logger } from '@nestjs/common';
+import * as nodemailer from 'nodemailer';
+import type { Transporter } from 'nodemailer';
+
+/**
+ * Clase PasswordRecoveryNotifierService que implementa la lógica principal de auth.
+ */
+/**
+ * Clase PasswordRecoveryNotifierService que implementa la lógica principal de auth.
+ */
+/**
+ * Clase PasswordRecoveryNotifierService que implementa la lógica principal de auth.
+ */
+@Injectable()
+export class PasswordRecoveryNotifierService {
+  private readonly logger = new Logger(PasswordRecoveryNotifierService.name);
+  private readonly transporter: Transporter | null;
+  private readonly fromAddress: string;
+  private readonly forcedRecipient?: string;
+
+  constructor() {
+    this.transporter = this.createTransporter();
+    this.fromAddress =
+      process.env.SMTP_FROM ??
+      process.env.SMTP_USER ??
+      'no-reply@rmparking.local';
+
+    // ES: Permite forzar un buzón destino para pruebas controladas.
+    const envOverride = process.env.PASSWORD_RESET_DELIVERY_OVERRIDE?.trim();
+    if (envOverride) {
+      this.forcedRecipient = envOverride;
+      this.logger.warn(
+        `PASSWORD_RESET_DELIVERY_OVERRIDE está activo. Todos los correos de recuperación se enviarán a ${envOverride}.`,
+      );
+    }
+  }
+
+  async sendRecoveryCode(
+    email: string,
+    code: string,
+    expirationMinutes: number,
+  ): Promise<boolean> {
+    if (!this.transporter) {
+      return false;
+    }
+
+    try {
+      const deliveryAddress = this.forcedRecipient || email;
+      await this.transporter.sendMail({
+        from: this.fromAddress,
+        to: deliveryAddress,
+        subject: 'RM Parking - Código de recuperación',
+        text: `Tu código de recuperación es: ${code}. Este código vence en ${expirationMinutes} minutos. Correo solicitado: ${email}.`,
+        html: `<p>Tu código de recuperación es: <strong>${code}</strong>.</p><p>Este código vence en ${expirationMinutes} minutos.</p><p>Correo solicitado: <strong>${email}</strong>.</p>`,
+      });
+      return true;
+    } catch (error) {
+      this.logger.warn(
+        `No fue posible enviar el correo de recuperación a ${email}: ${(error as Error).message}`,
+      );
+      return false;
+    }
+  }
+
+  private createTransporter(): Transporter | null {
+    const host = process.env.SMTP_HOST;
+    const portRaw = process.env.SMTP_PORT;
+
+    if (!host || !portRaw) {
+      return null;
+    }
+
+    const port = Number(portRaw);
+    if (!Number.isFinite(port) || port <= 0) {
+      this.logger.warn('SMTP_PORT no es válido. Se omite el envío de correo.');
+      return null;
+    }
+
+    const user = process.env.SMTP_USER;
+    const pass = process.env.SMTP_PASS;
+
+    return nodemailer.createTransport({
+      host,
+      port,
+      secure: port === 465,
+      auth: user && pass ? { user, pass } : undefined,
+    });
+  }
+}
+
+// Notas sobre uso:
+// - Si no se configuran `SMTP_HOST` y `SMTP_PORT` el servicio no enviará correos y retornará false.
+// - `PASSWORD_RESET_DELIVERY_OVERRIDE` permite redirigir temporalmente todos los envíos a una cuenta de pruebas.

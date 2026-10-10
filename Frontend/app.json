@@ -1,0 +1,20 @@
+{
+  "expo": {
+    "name": "RM Parking",
+    "slug": "rmparking-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "backgroundColor": "#1E3A8A"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.rmparking.app"
+    },
+    "android": {
+      "package": "com.rmparking.app"
+    }
+  }
+}
