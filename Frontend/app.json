@@ -15,6 +15,19 @@
     },
     "android": {
       "package": "com.rmparking.app"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "4648c352-b583-4a54-a424-2516877a3caa"
+      }
+    },
+    "plugins": [
+      "expo-build-properties",
+      {
+        "android": {
+          "kotlinVersion": "1.9.25"
+        }
+      }
+    ]
   }
 }
