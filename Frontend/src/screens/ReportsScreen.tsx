@@ -10,26 +10,32 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { reportsApi } from '../api/reports';
 
+/**
+ * Pantalla de Reportes Financieros y Estadísticas Operativas.
+ * Conectada directamente a los contratos de respuesta del ReportsController de NestJS.
+ */
 export const ReportsScreen = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [billingTotal, setBillingTotal] = useState<any>(null);
   const [vehicleCount, setVehicleCount] = useState<any>(null);
-  const [incomeByVehicle, setIncomeByVehicle] = useState<any[]>([]);
+  const [incomeByVehicleList, setIncomeByVehicleList] = useState<any[]>([]);
 
   const fetchReportsData = async () => {
     try {
-      const [billing, vehicles, income] = await Promise.all([
-        reportsApi.getBillingTotal().catch(() => ({ totalIngresos: 0 })),
+      const [billingRes, vehiclesRes, incomeRes] = await Promise.all([
+        reportsApi.getBillingTotal().catch(() => ({ totalFacturado: 0 })),
         reportsApi.getVehicleCount().catch(() => ({ totalVehiculos: 0 })),
-        reportsApi.getIncomeByVehicle().catch(() => []),
+        reportsApi.getIncomeByVehicle().catch(() => ({ desglose: [] })),
       ]);
 
-      setBillingTotal(billing);
-      setVehicleCount(vehicles);
-      setIncomeByVehicle(Array.isArray(income) ? income : []);
+      setBillingTotal(billingRes);
+      setVehicleCount(vehiclesRes);
+
+      const desgloseArray = incomeRes?.desglose || (Array.isArray(incomeRes) ? incomeRes : []);
+      setIncomeByVehicleList(desgloseArray);
     } catch (error) {
-      console.error('Error cargando reportes:', error);
+      console.error('Error cargando reportes operativos:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -58,18 +64,18 @@ export const ReportsScreen = () => {
         <ActivityIndicator size="large" color="#6366F1" style={{ marginTop: 40 }} />
       ) : (
         <>
-          {/* Tarjetas KPI de Resumen (Estilo Web Panel Card) */}
+          {/* Tarjetas KPI Replicando el Panel Web */}
           <View style={styles.kpiContainer}>
             <View style={[styles.kpiCard, { borderColor: '#818CF8' }]}>
-              <Text style={styles.kpiLabel}>Total Recaudado Hoy</Text>
+              <Text style={styles.kpiLabel}>Total Facturado</Text>
               <Text style={styles.kpiValue}>
-                ${(billingTotal?.totalIngresos || 0).toLocaleString('es-CO')}
+                ${(billingTotal?.totalFacturado ?? billingTotal?.totalIngresos ?? 0).toLocaleString('es-CO')}
               </Text>
             </View>
 
             <View style={[styles.kpiCard, { borderColor: '#34D399' }]}>
               <Text style={styles.kpiLabel}>Vehículos Atendidos</Text>
-              <Text style={styles.kpiValue}>{vehicleCount?.totalVehiculos || 0}</Text>
+              <Text style={styles.kpiValue}>{vehicleCount?.totalVehiculos ?? 0}</Text>
             </View>
           </View>
 
@@ -77,13 +83,22 @@ export const ReportsScreen = () => {
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Ingresos por Tipo de Vehículo</Text>
 
-            {incomeByVehicle.length === 0 ? (
-              <Text style={styles.emptyText}>No hay registros de ingresos disponibles.</Text>
+            {incomeByVehicleList.length === 0 ? (
+              <Text style={styles.emptyText}>No hay desglose de ingresos registrado para este período.</Text>
             ) : (
-              incomeByVehicle.map((item, index) => (
+              incomeByVehicleList.map((item, index) => (
                 <View key={index} style={styles.incomeRow}>
-                  <Text style={styles.vehicleTypeLabel}>{item.tipoVehiculo || item.vehicleType || 'GENERAL'}</Text>
-                  <Text style={styles.incomeAmount}>${(item.total || 0).toLocaleString('es-CO')}</Text>
+                  <View>
+                    <Text style={styles.vehicleTypeLabel}>
+                      {item.tipoVehiculo === 'CAR' ? 'Automóviles' : item.tipoVehiculo === 'MOTORCYCLE' ? 'Motocicletas' : item.tipoVehiculo || 'General'}
+                    </Text>
+                    {item.cantidadServicios !== undefined && (
+                      <Text style={styles.vehicleServicesText}>{item.cantidadServicios} servicios realizados</Text>
+                    )}
+                  </View>
+                  <Text style={styles.incomeAmount}>
+                    ${(item.totalIngresos ?? item.total ?? 0).toLocaleString('es-CO')}
+                  </Text>
                 </View>
               ))
             )}
@@ -125,8 +140,8 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   kpiLabel: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 11,
+    fontWeight: '700',
     color: '#64748B',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -154,6 +169,7 @@ const styles = StyleSheet.create({
   incomeRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
@@ -163,8 +179,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#334155',
   },
+  vehicleServicesText: {
+    fontSize: 12,
+    color: '#94A3B8',
+    marginTop: 2,
+  },
   incomeAmount: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: 'bold',
     color: '#10B981',
   },

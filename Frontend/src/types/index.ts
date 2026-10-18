@@ -1,28 +1,32 @@
 /**
- * Tipos de datos sincronizados con las entidades y DTOs del Backend NestJS de RMparking.
+ * Tipos de datos sincronizados con las entidades Prisma y DTOs del Backend NestJS.
  */
 
 export enum Role {
   SUPER_ADMIN = 'SUPER_ADMIN',
   ADMIN_PARKING = 'ADMIN_PARKING',
   OPERATOR = 'OPERATOR',
-  CLIENT_MONTHLY = 'CLIENT_MONTHLY',
+  AUDITOR = 'AUDITOR',
+  CLIENT = 'CLIENT',
 }
 
 export enum VehicleType {
-  CARRO = 'CARRO',
-  MOTO = 'MOTO'
+  CAR = 'CAR',
+  MOTORCYCLE = 'MOTORCYCLE',
+  VAN = 'VAN',
 }
 
 export interface User {
   id: string;
   email: string;
   name: string;
+  fullName?: string;
   role: Role;
   isActive: boolean;
   documentNumber?: string;
   phone?: string;
   parkingId?: string;
+  permissions?: string[];
 }
 
 export interface LoginRequest {
@@ -32,10 +36,9 @@ export interface LoginRequest {
 
 export interface LoginResponse {
   accessToken: string;
-  user: User;
-  attendanceAction?: 'CHECK_IN_CREATED' | 'CHECK_IN_REUSED' | 'NONE';
   attendanceId?: string;
   checkIn?: string;
+  attendanceAction?: 'CHECK_IN_CREATED' | 'CHECK_IN_REUSED' | 'NONE';
 }
 
 export interface RegisterRequest {
@@ -50,12 +53,11 @@ export interface RegisterRequest {
 
 export interface Parking {
   id: string;
-  nombre: string;
-  direccion?: string;
-  capacidadCarros: number;
-  capacidadMotos: number;
-  capacidadBicicletas: number;
-  activo: boolean;
+  name: string;
+  address?: string;
+  capacity?: number;
+  baseRate?: number;
+  isActive: boolean;
 }
 
 export interface EntryRequest {
@@ -70,70 +72,32 @@ export interface ExitRequest {
 
 export interface ActiveTicket {
   id: string;
-  placa: string;
-  vehicleType: VehicleType;
-  parkingId: string;
+  ticketCode: string;
   entryTime: string;
-  parkingName?: string;
-}
-
-export interface ClosedTicket {
-  id: string;
-  placa: string;
-  vehicleType: VehicleType;
-  entryTime: string;
-  exitTime: string;
-  totalCost: number;
-  timeParkedFormatted?: string;
+  vehicle?: {
+    plate: string;
+    type: string;
+  };
+  parking?: {
+    name: string;
+  };
 }
 
 export interface TicketSummary {
-  activos: ActiveTicket[];
-  cerrados: ClosedTicket[];
-}
-
-export interface CreateClientContractRequest {
-  nombre: string;
-  documento: string;
-  email: string;
-  telefono: string;
-  placa: string;
-  tipoVehiculo: VehicleType;
-  montoMensual: number;
-  parkingId: string;
-  fechaInicio: string;
-  fechaFin: string;
+  activos: any[];
+  cerrados: any[];
 }
 
 export interface ClientContract {
   id: string;
-  clientId: string;
   placa: string;
-  tipoVehiculo: VehicleType;
+  tipoVehiculo: string;
   montoMensual: number;
-  estado: 'ACTIVO' | 'VENCIDO' | 'SUSPENDIDO' | 'INACTIVO';
+  estado: string;
   fechaInicio: string;
   fechaFin: string;
-  client?: {
-    nombre: string;
-    documento: string;
+  user?: {
+    fullName: string;
     email: string;
-    telefono: string;
   };
-}
-
-export interface CashPaymentResponse {
-  paymentId: string;
-  exitId: string;
-  amount: number;
-  method: 'EFECTIVO';
-  status: 'APPROVED';
-}
-
-export interface ExitPaymentIntentResponse {
-  paymentId: string;
-  exitId: string;
-  amount: number;
-  qrCodeUrl?: string;
-  status: 'PENDING' | 'APPROVED';
 }

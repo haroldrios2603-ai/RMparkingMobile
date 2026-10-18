@@ -11,6 +11,10 @@ import { useFocusEffect } from '@react-navigation/native';
 import { clientsApi } from '../api/clients';
 import { ClientContract } from '../types';
 
+/**
+ * Pantalla de Contratos de Clientes Mensuales.
+ * Conectada a las respuestas del controlador de clientes de NestJS.
+ */
 export const ClientsScreen = () => {
   const [contracts, setContracts] = useState<ClientContract[]>([]);
   const [loading, setLoading] = useState(true);
@@ -19,7 +23,7 @@ export const ClientsScreen = () => {
   const fetchContracts = async () => {
     try {
       const list = await clientsApi.listContracts();
-      setContracts(list);
+      setContracts(Array.isArray(list) ? list : []);
     } catch (error) {
       console.error('Error cargando mensualidades:', error);
     } finally {
@@ -39,34 +43,35 @@ export const ClientsScreen = () => {
     fetchContracts();
   };
 
-  const renderContractItem = ({ item }: { item: ClientContract }) => (
-    <View style={styles.contractCard}>
-      <View style={styles.cardHeader}>
-        <Text style={styles.placaText}>{item.placa}</Text>
-        <Text
-          style={[
-            styles.badgeState,
-            item.estado === 'ACTIVO' ? styles.activeBadge : styles.expiredBadge,
-          ]}
-        >
-          {item.estado}
+  const renderContractItem = ({ item }: { item: any }) => {
+    const clientName = item.user?.fullName || item.user?.name || item.client?.nombre || 'Cliente Registrado';
+    const estado = item.estado || item.status || 'ACTIVO';
+    const isActivo = estado === 'ACTIVO' || estado === 'ACTIVE';
+
+    return (
+      <View style={styles.contractCard}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.placaText}>{item.placa}</Text>
+          <Text style={[styles.badgeState, isActivo ? styles.activeBadge : styles.expiredBadge]}>
+            {isActivo ? 'ACTIVO' : 'VENCIDO'}
+          </Text>
+        </View>
+
+        <Text style={styles.clientName}>{clientName}</Text>
+        <Text style={styles.infoText}>Monto Mensual: ${(item.montoMensual ?? item.monthlyFee ?? 0).toLocaleString('es-CO')}</Text>
+        <Text style={styles.dateText}>
+          Fecha de Vencimiento: {item.fechaFin ? new Date(item.fechaFin).toLocaleDateString('es-CO') : 'Sin fecha'}
         </Text>
       </View>
-
-      <Text style={styles.clientName}>{item.client?.nombre || 'Cliente Registrado'}</Text>
-      <Text style={styles.infoText}>Monto: ${item.montoMensual?.toLocaleString('es-CO')}</Text>
-      <Text style={styles.dateText}>
-        Vence: {new Date(item.fechaFin).toLocaleDateString('es-CO')}
-      </Text>
-    </View>
-  );
+    );
+  };
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Clientes y Contratos Mensuales</Text>
 
       {loading ? (
-        <ActivityIndicator size="large" color="#1E3A8A" style={{ marginTop: 20 }} />
+        <ActivityIndicator size="large" color="#6366F1" style={{ marginTop: 20 }} />
       ) : (
         <FlatList
           data={contracts}
@@ -86,22 +91,22 @@ export const ClientsScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#F8FAFC',
     padding: 16,
   },
   title: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
-    color: '#111827',
+    color: '#0F172A',
     marginBottom: 16,
   },
   contractCard: {
     backgroundColor: '#FFFFFF',
     padding: 16,
-    borderRadius: 10,
-    marginBottom: 12,
+    borderRadius: 12,
+    marginBottom: 10,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#E2E8F0',
   },
   cardHeader: {
     flexDirection: 'row',
@@ -111,41 +116,42 @@ const styles = StyleSheet.create({
   placaText: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#1E3A8A',
+    color: '#0F172A',
   },
   clientName: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#374151',
+    color: '#334155',
     marginVertical: 4,
   },
   infoText: {
-    fontSize: 14,
-    color: '#4B5563',
+    fontSize: 13,
+    color: '#64748B',
   },
   dateText: {
     fontSize: 12,
-    color: '#6B7280',
+    color: '#94A3B8',
     marginTop: 4,
   },
   badgeState: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: 'bold',
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 6,
   },
   activeBadge: {
-    backgroundColor: '#DCFCE7',
-    color: '#166534',
+    backgroundColor: '#ECFDF5',
+    color: '#059669',
   },
   expiredBadge: {
-    backgroundColor: '#FEE2E2',
+    backgroundColor: '#FEF2F2',
     color: '#991B1B',
   },
   emptyText: {
     textAlign: 'center',
-    color: '#9CA3AF',
-    marginTop: 30,
+    color: '#94A3B8',
+    marginTop: 40,
+    fontSize: 14,
   },
 });

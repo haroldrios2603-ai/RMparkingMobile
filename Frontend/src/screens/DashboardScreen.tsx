@@ -4,14 +4,17 @@ import {
   Text,
   StyleSheet,
   FlatList,
-  TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { parkingApi } from '../api/parking';
-import { ActiveTicket, TicketSummary } from '../types';
+import { TicketSummary } from '../types';
 
+/**
+ * Pantalla de Monitoreo y Dashboard Operativo en Tiempo Real.
+ * Sincronizada con la respuesta de NestJS del controlador de parqueaderos.
+ */
 export const DashboardScreen = () => {
   const [summary, setSummary] = useState<TicketSummary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -22,7 +25,7 @@ export const DashboardScreen = () => {
       const data = await parkingApi.getResumenTickets();
       setSummary(data);
     } catch (error: any) {
-      console.error('Error cargando resumen:', error);
+      console.error('Error cargando resumen operativo:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -40,27 +43,36 @@ export const DashboardScreen = () => {
     fetchSummary();
   };
 
-  const renderActiveTicketItem = ({ item }: { item: ActiveTicket }) => (
-    <View style={styles.ticketCard}>
-      <View style={styles.ticketHeader}>
-        <Text style={styles.placaText}>{item.placa}</Text>
-        <Text style={styles.badgeType}>{item.vehicleType}</Text>
+  const renderActiveTicketItem = ({ item }: { item: any }) => {
+    const placa = item.vehicle?.plate || item.placa || 'SIN PLACA';
+    const rawType = item.vehicle?.type || item.vehicleType || 'CAR';
+    const vehicleType = rawType === 'CAR' ? 'Automóvil' : rawType === 'MOTORCYCLE' ? 'Motocicleta' : 'Camioneta';
+    const ticketCode = item.ticketCode ? `Ticket #${item.ticketCode}` : '';
+    const entryTime = item.entryTime ? new Date(item.entryTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--';
+
+    return (
+      <View style={styles.ticketCard}>
+        <View style={styles.ticketHeader}>
+          <View>
+            <Text style={styles.placaText}>{placa}</Text>
+            {ticketCode !== '' && <Text style={styles.ticketCodeText}>{ticketCode}</Text>}
+          </View>
+          <Text style={styles.badgeType}>{vehicleType}</Text>
+        </View>
+        <Text style={styles.timeText}>Hora de Ingreso: {entryTime}</Text>
       </View>
-      <Text style={styles.timeText}>
-        Ingreso: {new Date(item.entryTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-      </Text>
-    </View>
-  );
+    );
+  };
 
   return (
     <View style={styles.container}>
       <View style={styles.metricsContainer}>
-        <View style={[styles.metricCard, { backgroundColor: '#E0F2FE' }]}>
-          <Text style={styles.metricNumber}>{summary?.activos?.length ?? 0}</Text>
+        <View style={[styles.metricCard, { backgroundColor: '#EEF2FF', borderColor: '#6366F1' }]}>
+          <Text style={[styles.metricNumber, { color: '#4F46E5' }]}>{summary?.activos?.length ?? 0}</Text>
           <Text style={styles.metricLabel}>Vehículos Activos</Text>
         </View>
-        <View style={[styles.metricCard, { backgroundColor: '#DCFCE7' }]}>
-          <Text style={styles.metricNumber}>{summary?.cerrados?.length ?? 0}</Text>
+        <View style={[styles.metricCard, { backgroundColor: '#ECFDF5', borderColor: '#10B981' }]}>
+          <Text style={[styles.metricNumber, { color: '#059669' }]}>{summary?.cerrados?.length ?? 0}</Text>
           <Text style={styles.metricLabel}>Egresos Hoy</Text>
         </View>
       </View>
@@ -68,7 +80,7 @@ export const DashboardScreen = () => {
       <Text style={styles.sectionTitle}>Vehículos en Parqueadero</Text>
 
       {loading ? (
-        <ActivityIndicator size="large" color="#1E3A8A" style={{ marginTop: 20 }} />
+        <ActivityIndicator size="large" color="#6366F1" style={{ marginTop: 20 }} />
       ) : (
         <FlatList
           data={summary?.activos || []}
@@ -76,7 +88,7 @@ export const DashboardScreen = () => {
           renderItem={renderActiveTicketItem}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           ListEmptyComponent={
-            <Text style={styles.emptyText}>No hay vehículos registrados en este momento.</Text>
+            <Text style={styles.emptyText}>No hay vehículos activos en este momento.</Text>
           }
           contentContainerStyle={{ paddingBottom: 20 }}
         />
@@ -88,45 +100,46 @@ export const DashboardScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#F8FAFC',
     padding: 16,
   },
   metricsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 20,
+    gap: 12,
   },
   metricCard: {
     flex: 1,
     padding: 16,
-    borderRadius: 12,
+    borderRadius: 14,
     alignItems: 'center',
-    marginHorizontal: 4,
+    borderWidth: 1,
   },
   metricNumber: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#1E3A8A',
   },
   metricLabel: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#374151',
+    fontWeight: '700',
+    color: '#334155',
     marginTop: 4,
+    textTransform: 'uppercase',
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#111827',
+    color: '#0F172A',
     marginBottom: 12,
   },
   ticketCard: {
     backgroundColor: '#FFFFFF',
     padding: 16,
-    borderRadius: 10,
+    borderRadius: 12,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#E2E8F0',
   },
   ticketHeader: {
     flexDirection: 'row',
@@ -135,26 +148,32 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   placaText: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
-    color: '#1E3A8A',
+    color: '#0F172A',
+  },
+  ticketCodeText: {
+    fontSize: 12,
+    color: '#64748B',
+    marginTop: 2,
   },
   badgeType: {
-    backgroundColor: '#DBEAFE',
-    color: '#1E40AF',
-    fontWeight: '600',
+    backgroundColor: '#EEF2FF',
+    color: '#4F46E5',
+    fontWeight: 'bold',
     fontSize: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
   timeText: {
-    fontSize: 14,
-    color: '#6B7280',
+    fontSize: 13,
+    color: '#64748B',
+    marginTop: 4,
   },
   emptyText: {
     textAlign: 'center',
-    color: '#9CA3AF',
+    color: '#94A3B8',
     marginTop: 30,
     fontSize: 14,
   },

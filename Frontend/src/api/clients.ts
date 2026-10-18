@@ -1,5 +1,5 @@
 import { apiClient } from './client';
-import { ClientContract, CreateClientContractRequest } from '../types';
+import { ClientContract } from '../types';
 
 export const clientsApi = {
   /**
@@ -13,7 +13,7 @@ export const clientsApi = {
   /**
    * Registra un nuevo cliente con contrato mensual.
    */
-  createClientContract: async (data: CreateClientContractRequest): Promise<ClientContract> => {
+  createClientContract: async (data: any): Promise<ClientContract> => {
     const response = await apiClient.post<ClientContract>('/clients', data);
     return response.data;
   },
