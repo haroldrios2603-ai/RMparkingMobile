@@ -8,12 +8,13 @@ import {
   Modal,
   ScrollView,
   useWindowDimensions,
-  SafeAreaView,
   StatusBar,
+  Platform,
 } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
 
 import { LoginScreen } from '../screens/LoginScreen';
@@ -99,11 +100,14 @@ const MENU_ITEMS: MenuItem[] = [
 function ResponsiveMainLayout() {
   const { user, logout } = useAuth();
   const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const [activeScreen, setActiveScreen] = useState<ScreenKey>('Dashboard');
   const [menuVisible, setMenuVisible] = useState(false);
 
   const isTablet = width >= 768;
-  const drawerWidth = isTablet ? 360 : Math.min(width * 0.85, 330);
+  const drawerWidth = isTablet
+    ? Math.min(width * 0.4, 420)
+    : Math.max(Math.min(width * 0.85, 330), 260);
 
   const activeMenuItem = MENU_ITEMS.find((item) => item.key === activeScreen);
 
@@ -131,8 +135,8 @@ function ResponsiveMainLayout() {
   };
 
   return (
-    <SafeAreaView style={styles.mainContainer}>
-      <StatusBar barStyle="light-content" backgroundColor="#0F172A" />
+    <View style={[styles.mainContainer, { paddingTop: Platform.OS === 'android' ? insets.top : 0 }]}>
+      <StatusBar barStyle="light-content" backgroundColor="#0F172A" translucent={false} />
 
       {/* Encabezado Superior con Botón Hamburguesa e Isotipo RM */}
       <View style={styles.topHeaderBar}>
@@ -146,7 +150,9 @@ function ResponsiveMainLayout() {
 
         <View style={styles.headerTitleContainer}>
           <Text style={styles.headerBrandTitle}>RM PARKING</Text>
-          <Text style={styles.headerSubtitle}>{activeMenuItem?.label}</Text>
+          <Text style={styles.headerSubtitle} numberOfLines={1} ellipsizeMode="tail">
+            {activeMenuItem?.label}
+          </Text>
         </View>
 
         <TouchableOpacity
@@ -164,7 +170,7 @@ function ResponsiveMainLayout() {
 
       {/* Menú Desplegable Hamburguesa con Marca RM y Ajuste Fluid-Responsive */}
       <Modal
-        animationType="slide"
+        animationType="fade"
         transparent={true}
         visible={menuVisible}
         onRequestClose={() => setMenuVisible(false)}
@@ -174,7 +180,16 @@ function ResponsiveMainLayout() {
           activeOpacity={1}
           onPress={() => setMenuVisible(false)}
         >
-          <View style={[styles.drawerContent, { width: drawerWidth }]}>
+          <View
+            style={[
+              styles.drawerContent,
+              {
+                width: drawerWidth,
+                paddingTop: insets.top + 16,
+                paddingBottom: insets.bottom + 16,
+              },
+            ]}
+          >
             {/* Encabezado del Menú con Logo Marca RM */}
             <View style={styles.drawerHeader}>
               <View style={styles.drawerBrandRow}>
@@ -183,7 +198,9 @@ function ResponsiveMainLayout() {
                 </View>
                 <View style={styles.drawerBrandTextGroup}>
                   <Text style={styles.drawerTitleText}>RM Parking</Text>
-                  <Text style={styles.drawerSubtitleText}>Gestión de Estacionamientos</Text>
+                  <Text style={styles.drawerSubtitleText} numberOfLines={1}>
+                    Gestión de Estacionamientos
+                  </Text>
                 </View>
               </View>
 
@@ -197,8 +214,12 @@ function ResponsiveMainLayout() {
 
             {/* Ficha de Usuario Activo */}
             <View style={styles.drawerUserSection}>
-              <Text style={styles.drawerUserName}>{user?.name || user?.email}</Text>
-              <Text style={styles.drawerUserRole}>{user?.role || 'OPERADOR'}</Text>
+              <Text style={styles.drawerUserName} numberOfLines={1} ellipsizeMode="tail">
+                {user?.name || user?.email}
+              </Text>
+              <Text style={styles.drawerUserRole} numberOfLines={1}>
+                {user?.role || 'OPERADOR'}
+              </Text>
             </View>
 
             {/* Lista de Submenús Adaptable */}
@@ -242,7 +263,7 @@ function ResponsiveMainLayout() {
           </View>
         </TouchableOpacity>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -292,9 +313,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#1E293B',
     justifyContent: 'center',
     alignItems: 'center',
+    flexShrink: 0,
   },
   headerTitleContainer: {
     flex: 1,
+    minWidth: 0,
     marginLeft: 12,
   },
   headerBrandTitle: {
@@ -314,6 +337,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#4F46E5',
     justifyContent: 'center',
     alignItems: 'center',
+    flexShrink: 0,
   },
   profileBadgeInitial: {
     color: '#FFFFFF',
@@ -334,12 +358,14 @@ const styles = StyleSheet.create({
   // Menú Hamburguesa Desplegable
   drawerOverlay: {
     flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
     backgroundColor: 'rgba(15, 23, 42, 0.85)',
   },
   drawerContent: {
     flex: 1,
     backgroundColor: '#0F172A',
-    padding: 20,
+    paddingHorizontal: 20,
     shadowColor: '#000',
     shadowOffset: { width: 4, height: 0 },
     shadowOpacity: 0.3,
@@ -350,16 +376,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 16,
     paddingBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#1E293B',
+    flexShrink: 0,
+    maxHeight: 90,
   },
   drawerBrandRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
     flex: 1,
+    minWidth: 0,
   },
   drawerBadgeLogo: {
     width: 44,
@@ -368,6 +397,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#6366F1',
     justifyContent: 'center',
     alignItems: 'center',
+    flexShrink: 0,
   },
   drawerBadgeLogoText: {
     color: '#FFFFFF',
@@ -377,6 +407,7 @@ const styles = StyleSheet.create({
   },
   drawerBrandTextGroup: {
     flex: 1,
+    minWidth: 0,
   },
   drawerTitleText: {
     fontSize: 18,
@@ -391,12 +422,15 @@ const styles = StyleSheet.create({
     padding: 6,
     borderRadius: 20,
     backgroundColor: '#1E293B',
+    flexShrink: 0,
   },
   drawerUserSection: {
     backgroundColor: '#1E293B',
     borderRadius: 12,
     padding: 14,
     marginBottom: 16,
+    flexShrink: 0,
+    maxHeight: 84,
   },
   drawerUserName: {
     color: '#FFFFFF',
@@ -431,12 +465,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
+    flexShrink: 0,
   },
   activeIconWrapper: {
     backgroundColor: '#6366F1',
   },
   menuTextGroup: {
     flex: 1,
+    minWidth: 0,
   },
   menuItemLabel: {
     color: '#FFFFFF',
@@ -461,6 +497,8 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 12,
     marginTop: 16,
+    flexShrink: 0,
+    minHeight: 48,
   },
   drawerLogoutText: {
     color: '#FFFFFF',

@@ -12,8 +12,46 @@ import { parkingApi } from '../api/parking';
 import { TicketSummary } from '../types';
 
 /**
+ * Formatea una fecha e calcula el tiempo transcurrido en el parqueadero.
+ */
+const calculateTimeInfo = (entryDateString?: string) => {
+  if (!entryDateString) {
+    return { dateFormatted: 'Sin fecha', timeFormatted: '--:--', elapsedFormatted: '0 mins' };
+  }
+
+  const entry = new Date(entryDateString);
+  if (isNaN(entry.getTime())) {
+    return { dateFormatted: 'Inválida', timeFormatted: '--:--', elapsedFormatted: '0 mins' };
+  }
+
+  const day = String(entry.getDate()).padStart(2, '0');
+  const month = String(entry.getMonth() + 1).padStart(2, '0');
+  const year = entry.getFullYear();
+  const dateFormatted = `${day}/${month}/${year}`;
+
+  let hours = entry.getHours();
+  const minutes = String(entry.getMinutes()).padStart(2, '0');
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12 || 12;
+  const timeFormatted = `${String(hours).padStart(2, '0')}:${minutes} ${ampm}`;
+
+  const now = new Date();
+  const elapsedMs = Math.max(0, now.getTime() - entry.getTime());
+  const elapsedTotalMins = Math.floor(elapsedMs / (1000 * 60));
+  const elapsedHours = Math.floor(elapsedTotalMins / 60);
+  const elapsedMins = elapsedTotalMins % 60;
+
+  const elapsedFormatted =
+    elapsedHours > 0
+      ? `${elapsedHours}h ${elapsedMins}m (${elapsedTotalMins} mins)`
+      : `${elapsedTotalMins} mins`;
+
+  return { dateFormatted, timeFormatted, elapsedFormatted };
+};
+
+/**
  * Pantalla de Monitoreo y Dashboard Operativo en Tiempo Real.
- * Sincronizada con la respuesta de NestJS del controlador de parqueaderos.
+ * Muestra el conteo de aforo, lista de vehículos activos, fecha, hora y tiempo permanecido.
  */
 export const DashboardScreen = () => {
   const [summary, setSummary] = useState<TicketSummary | null>(null);
@@ -48,18 +86,31 @@ export const DashboardScreen = () => {
     const rawType = item.vehicle?.type || item.vehicleType || 'CAR';
     const vehicleType = rawType === 'CAR' ? 'Automóvil' : rawType === 'MOTORCYCLE' ? 'Motocicleta' : 'Camioneta';
     const ticketCode = item.ticketCode ? `Ticket #${item.ticketCode}` : '';
-    const entryTime = item.entryTime ? new Date(item.entryTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--';
+    const { dateFormatted, timeFormatted, elapsedFormatted } = calculateTimeInfo(item.entryTime);
 
     return (
       <View style={styles.ticketCard}>
         <View style={styles.ticketHeader}>
-          <View>
+          <View style={{ flex: 1 }}>
             <Text style={styles.placaText}>{placa}</Text>
             {ticketCode !== '' && <Text style={styles.ticketCodeText}>{ticketCode}</Text>}
           </View>
           <Text style={styles.badgeType}>{vehicleType}</Text>
         </View>
-        <Text style={styles.timeText}>Hora de Ingreso: {entryTime}</Text>
+
+        <View style={styles.timeInfoRow}>
+          <Text style={styles.timeDetailText}>
+            📅 <Text style={styles.timeDetailBold}>Fecha:</Text> {dateFormatted}
+          </Text>
+          <Text style={styles.timeDetailText}>
+            ⏰ <Text style={styles.timeDetailBold}>Hora:</Text> {timeFormatted}
+          </Text>
+        </View>
+
+        <View style={styles.elapsedContainer}>
+          <Text style={styles.elapsedLabel}>⏱️ Tiempo Permanecido en Parqueadero:</Text>
+          <Text style={styles.elapsedValueText}>{elapsedFormatted}</Text>
+        </View>
       </View>
     );
   };
@@ -136,16 +187,24 @@ const styles = StyleSheet.create({
   ticketCard: {
     backgroundColor: '#FFFFFF',
     padding: 16,
-    borderRadius: 12,
-    marginBottom: 10,
+    borderRadius: 14,
+    marginBottom: 12,
     borderWidth: 1,
     borderColor: '#E2E8F0',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
   },
   ticketHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: 8,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
   },
   placaText: {
     fontSize: 20,
@@ -166,10 +225,38 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 8,
   },
-  timeText: {
+  timeInfoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginVertical: 4,
+  },
+  timeDetailText: {
     fontSize: 13,
+    color: '#475569',
+  },
+  timeDetailBold: {
+    fontWeight: '700',
+    color: '#1E293B',
+  },
+  elapsedContainer: {
+    marginTop: 8,
+    backgroundColor: '#F8FAFC',
+    padding: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  elapsedLabel: {
+    fontSize: 11,
+    fontWeight: '700',
     color: '#64748B',
-    marginTop: 4,
+    textTransform: 'uppercase',
+  },
+  elapsedValueText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#4F46E5',
+    marginTop: 2,
   },
   emptyText: {
     textAlign: 'center',
