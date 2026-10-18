@@ -6,14 +6,21 @@
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
+    "icon": "./src/assets/icon.png",
     "splash": {
-      "backgroundColor": "#1E3A8A"
+      "image": "./src/assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0F172A"
     },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.rmparking.app"
     },
     "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./src/assets/adaptive-icon.png",
+        "backgroundColor": "#0F172A"
+      },
       "package": "com.rmparking.app"
     },
     "extra": {

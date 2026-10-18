@@ -15,6 +15,10 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { authApi } from '../api/auth';
 
+/**
+ * Pantalla de inicio de sesión de RM Parking.
+ * Replicada con la identidad corporativa de la app web (#0F172A Slate y #6366F1 Indigo).
+ */
 export const LoginScreen = () => {
   const { login } = useAuth();
   const [email, setEmail] = useState('admin@rmparking.com');
@@ -22,7 +26,6 @@ export const LoginScreen = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // Modal para recuperación de contraseña
   const [resetModalVisible, setResetModalVisible] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
   const [resetLoading, setResetLoading] = useState(false);
@@ -69,21 +72,20 @@ export const LoginScreen = () => {
       style={styles.container}
     >
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-        {/* Encabezado e Icono de la Marca */}
+        {/* Encabezado con la Marca Oficial RM Parking */}
         <View style={styles.headerContainer}>
           <View style={styles.logoBadge}>
-            <Text style={styles.logoBadgeText}>P</Text>
+            <Text style={styles.logoBadgeText}>RM</Text>
           </View>
           <Text style={styles.brandTitle}>RM Parking</Text>
           <Text style={styles.brandSubtitle}>Sistema de Gestión de Estacionamientos</Text>
         </View>
 
-        {/* Tarjeta de Formulario Web */}
+        {/* Tarjeta de Formulario Adaptable */}
         <View style={styles.card}>
           <Text style={styles.formHeading}>Iniciar Sesión</Text>
           <Text style={styles.formSubheading}>Ingresa tus credenciales para acceder al sistema</Text>
 
-          {/* Campo Correo */}
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>Correo Electrónico</Text>
             <TextInput
@@ -91,14 +93,13 @@ export const LoginScreen = () => {
               value={email}
               onChangeText={setEmail}
               placeholder="ejemplo@rmparking.com"
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor="#94A3B8"
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
             />
           </View>
 
-          {/* Campo Contraseña */}
           <View style={styles.inputGroup}>
             <View style={styles.passwordHeaderRow}>
               <Text style={styles.inputLabel}>Contraseña</Text>
@@ -111,13 +112,12 @@ export const LoginScreen = () => {
               value={password}
               onChangeText={setPassword}
               placeholder="••••••••"
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor="#94A3B8"
               secureTextEntry={!showPassword}
               autoCapitalize="none"
             />
           </View>
 
-          {/* Enlace de Olvidé Contraseña */}
           <TouchableOpacity
             style={styles.forgotButton}
             onPress={() => {
@@ -128,7 +128,6 @@ export const LoginScreen = () => {
             <Text style={styles.forgotText}>¿Olvidaste tu contraseña?</Text>
           </TouchableOpacity>
 
-          {/* Botón Principal de Inicio de Sesión */}
           <TouchableOpacity
             style={[styles.submitButton, loading && styles.submitButtonDisabled]}
             onPress={handleLogin}
@@ -143,7 +142,6 @@ export const LoginScreen = () => {
           </TouchableOpacity>
         </View>
 
-        {/* Pie de Página */}
         <View style={styles.footerContainer}>
           <Text style={styles.footerText}>© 2025 RM Parking. Todos los derechos reservados.</Text>
         </View>
@@ -202,7 +200,7 @@ export const LoginScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F172A', // Fondo Slate web exacto
+    backgroundColor: '#0F172A',
   },
   scrollContent: {
     flexGrow: 1,
@@ -215,10 +213,10 @@ const styles = StyleSheet.create({
     marginBottom: 28,
   },
   logoBadge: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: '#6366F1', // Indigo web
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    backgroundColor: '#6366F1',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12,
@@ -230,8 +228,9 @@ const styles = StyleSheet.create({
   },
   logoBadgeText: {
     color: '#FFFFFF',
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: 'bold',
+    letterSpacing: 1,
   },
   brandTitle: {
     fontSize: 28,
@@ -308,7 +307,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   submitButton: {
-    backgroundColor: '#4F46E5', // Indigo web
+    backgroundColor: '#4F46E5',
     borderRadius: 10,
     paddingVertical: 14,
     alignItems: 'center',

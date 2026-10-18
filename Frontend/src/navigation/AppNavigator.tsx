@@ -102,7 +102,8 @@ function ResponsiveMainLayout() {
   const [activeScreen, setActiveScreen] = useState<ScreenKey>('Dashboard');
   const [menuVisible, setMenuVisible] = useState(false);
 
-  const isLargeScreen = width >= 768; // Adaptable para tabletas o pantallas grandes
+  const isTablet = width >= 768;
+  const drawerWidth = isTablet ? 360 : Math.min(width * 0.85, 330);
 
   const activeMenuItem = MENU_ITEMS.find((item) => item.key === activeScreen);
 
@@ -133,7 +134,7 @@ function ResponsiveMainLayout() {
     <SafeAreaView style={styles.mainContainer}>
       <StatusBar barStyle="light-content" backgroundColor="#0F172A" />
 
-      {/* BARRA SUPERIOR AZUL/SLATE CON BOTÓN HAMBURGUESA EN LA PARTE SUPERIOR IZQUIERDA */}
+      {/* Encabezado Superior con Botón Hamburguesa e Isotipo RM */}
       <View style={styles.topHeaderBar}>
         <TouchableOpacity
           style={styles.hamburgerButton}
@@ -150,9 +151,7 @@ function ResponsiveMainLayout() {
 
         <TouchableOpacity
           style={styles.profileBadgeHeader}
-          onPress={() => {
-            setActiveScreen('Profile');
-          }}
+          onPress={() => setActiveScreen('Profile')}
         >
           <Text style={styles.profileBadgeInitial}>
             {user?.name?.charAt(0).toUpperCase() || 'U'}
@@ -160,10 +159,10 @@ function ResponsiveMainLayout() {
         </TouchableOpacity>
       </View>
 
-      {/* CONTENIDO PRINCIPAL ADAPTABLE */}
+      {/* Contenido Dinámico Adaptable */}
       <View style={styles.contentContainer}>{renderActiveScreen()}</View>
 
-      {/* MENÚ HAMBURGUESA DESPLEGABLE CON FOTOS/ÍCONOS ALUSIVOS Y LETRAS BLANCAS */}
+      {/* Menú Desplegable Hamburguesa con Marca RM y Ajuste Fluid-Responsive */}
       <Modal
         animationType="slide"
         transparent={true}
@@ -175,21 +174,16 @@ function ResponsiveMainLayout() {
           activeOpacity={1}
           onPress={() => setMenuVisible(false)}
         >
-          <View
-            style={[
-              styles.drawerContent,
-              { width: isLargeScreen ? 360 : Math.min(width * 0.82, 320) },
-            ]}
-          >
-            {/* Encabezado del Menú Desplegable Azul */}
+          <View style={[styles.drawerContent, { width: drawerWidth }]}>
+            {/* Encabezado del Menú con Logo Marca RM */}
             <View style={styles.drawerHeader}>
               <View style={styles.drawerBrandRow}>
                 <View style={styles.drawerBadgeLogo}>
-                  <Text style={styles.drawerBadgeLogoText}>P</Text>
+                  <Text style={styles.drawerBadgeLogoText}>RM</Text>
                 </View>
-                <View>
+                <View style={styles.drawerBrandTextGroup}>
                   <Text style={styles.drawerTitleText}>RM Parking</Text>
-                  <Text style={styles.drawerSubtitleText}>Sistema de Estacionamientos</Text>
+                  <Text style={styles.drawerSubtitleText}>Gestión de Estacionamientos</Text>
                 </View>
               </View>
 
@@ -201,13 +195,13 @@ function ResponsiveMainLayout() {
               </TouchableOpacity>
             </View>
 
-            {/* Datos del Usuario en el Menú */}
+            {/* Ficha de Usuario Activo */}
             <View style={styles.drawerUserSection}>
               <Text style={styles.drawerUserName}>{user?.name || user?.email}</Text>
               <Text style={styles.drawerUserRole}>{user?.role || 'OPERADOR'}</Text>
             </View>
 
-            {/* Listado de Submenús con Íconos Alusivos e Iluminación Adaptable */}
+            {/* Lista de Submenús Adaptable */}
             <ScrollView style={styles.drawerScrollView} showsVerticalScrollIndicator={false}>
               {MENU_ITEMS.map((item) => {
                 const isActive = activeScreen === item.key;
@@ -221,9 +215,7 @@ function ResponsiveMainLayout() {
                     }}
                     activeOpacity={0.8}
                   >
-                    <View
-                      style={[styles.iconWrapper, isActive && styles.activeIconWrapper]}
-                    >
+                    <View style={[styles.iconWrapper, isActive && styles.activeIconWrapper]}>
                       <Ionicons
                         name={item.iconName}
                         size={22}
@@ -242,7 +234,7 @@ function ResponsiveMainLayout() {
               })}
             </ScrollView>
 
-            {/* Botón de Cierre de Sesión en el Menú */}
+            {/* Cierre de Sesión */}
             <TouchableOpacity style={styles.drawerLogoutButton} onPress={logout}>
               <Ionicons name="log-out-outline" size={20} color="#FFFFFF" />
               <Text style={styles.drawerLogoutText}>Cerrar Sesión</Text>
@@ -339,7 +331,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#0F172A',
   },
 
-  // Estilos del Menú Desplegable Hamburguesa
+  // Menú Hamburguesa Desplegable
   drawerOverlay: {
     flex: 1,
     backgroundColor: 'rgba(15, 23, 42, 0.85)',
@@ -366,20 +358,25 @@ const styles = StyleSheet.create({
   drawerBrandRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
+    flex: 1,
   },
   drawerBadgeLogo: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: '#6366F1',
     justifyContent: 'center',
     alignItems: 'center',
   },
   drawerBadgeLogoText: {
     color: '#FFFFFF',
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: 'bold',
+    letterSpacing: 0.5,
+  },
+  drawerBrandTextGroup: {
+    flex: 1,
   },
   drawerTitleText: {
     fontSize: 18,
