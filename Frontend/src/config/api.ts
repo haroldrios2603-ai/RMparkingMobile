@@ -1,15 +1,10 @@
-import { API_URL_DEV, API_URL_PROD } from '@env';
-
 /**
  * Configuración de la URL base de la API del Backend NestJS.
- * - Garantiza conexión con el servidor desplegado en la nube Railway para que el APK funcione en cualquier celular.
+ * Usa la variable nativa de Expo `process.env.EXPO_PUBLIC_API_URL` con respaldo automático a Railway.
  */
 const getBaseUrl = (): string => {
   const railwayUrl = 'https://sena-production-757e.up.railway.app';
-  if (__DEV__) {
-    return API_URL_DEV || railwayUrl;
-  }
-  return API_URL_PROD || railwayUrl;
+  return process.env.EXPO_PUBLIC_API_URL || railwayUrl;
 };
 
 export const API_CONFIG = {
