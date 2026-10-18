@@ -14,9 +14,25 @@ import { paymentsApi } from '../api/payments';
 import { Parking, VehicleType } from '../types';
 
 /**
- * Pantalla para el registro de ingresos y salidas de vehículos.
- * Sincronizada con las validaciones DTO de NestJS (@MinLength(6), VehicleType: CAR, MOTORCYCLE, VAN).
+ * Formatea una fecha ISO a representación legible DD/MM/YYYY hh:mm A.
  */
+const formatDateTime = (dateString?: string): string => {
+  if (!dateString) return 'No registrada';
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return 'Fecha inválida';
+
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+
+  let hours = date.getHours();
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12 || 12;
+
+  return `${day}/${month}/${year} ${String(hours).padStart(2, '0')}:${minutes} ${ampm}`;
+};
+
 export const EntryExitScreen = () => {
   const [tab, setTab] = useState<'ENTRY' | 'EXIT'>('ENTRY');
   const [placa, setPlaca] = useState('');
@@ -33,12 +49,12 @@ export const EntryExitScreen = () => {
   const loadParkings = async () => {
     try {
       const list = await parkingApi.getAllParkings();
-      setParkings(list);
+      setParkings(list || []);
       if (list && list.length > 0) {
         setSelectedParkingId(list[0].id);
       }
     } catch (error) {
-      console.error('Error cargando sedes de parqueadero:', error);
+      console.error('Error cargando parqueaderos:', error);
     }
   };
 
@@ -46,27 +62,28 @@ export const EntryExitScreen = () => {
     const cleanPlaca = placa.trim().toUpperCase();
 
     if (cleanPlaca.length !== 6) {
-      Alert.alert('Validación de Placa', 'La placa debe tener exactamente 6 caracteres alfanuméricos (ej. ABC123).');
+      Alert.alert('Restricción de Placa', 'La placa debe contener exactamente 6 caracteres alfanuméricos (ej. ABC123).');
       return;
     }
 
     if (!selectedParkingId) {
-      Alert.alert('Sede Requerida', 'Por favor selecciona una sede de parqueadero válida.');
+      Alert.alert('Sede Requerida', 'Seleccione una sede de parqueadero.');
       return;
     }
 
     setLoading(true);
     try {
-      await parkingApi.registerEntry({
+      const result = await parkingApi.registerEntry({
         placa: cleanPlaca,
         vehicleType,
         parkingId: selectedParkingId,
       });
-      Alert.alert('Ingreso Registrado', `Vehículo con placa ${cleanPlaca} ingresado con éxito.`);
+      const entryTimeFormatted = formatDateTime(result?.entryTime);
+      Alert.alert('Ingreso Registrado', `Placa: ${cleanPlaca}\nHora de Ingreso: ${entryTimeFormatted}`);
       setPlaca('');
     } catch (error: any) {
-      const msg = error.response?.data?.message || 'Error al registrar el ingreso del vehículo.';
-      Alert.alert('Error de Operación', Array.isArray(msg) ? msg.join('\n') : msg);
+      const msg = error.response?.data?.message || 'Error al registrar ingreso.';
+      Alert.alert('Error', Array.isArray(msg) ? msg.join('\n') : msg);
     } finally {
       setLoading(false);
     }
@@ -75,8 +92,8 @@ export const EntryExitScreen = () => {
   const handleRegisterExit = async () => {
     const cleanPlaca = placa.trim().toUpperCase();
 
-    if (cleanPlaca.length < 6) {
-      Alert.alert('Validación de Placa', 'Ingresa una placa válida de al menos 6 caracteres.');
+    if (cleanPlaca.length !== 6) {
+      Alert.alert('Restricción de Placa', 'La placa debe tener exactamente 6 caracteres para consultar la salida.');
       return;
     }
 
@@ -86,8 +103,8 @@ export const EntryExitScreen = () => {
       const res = await parkingApi.registerExit({ placa: cleanPlaca });
       setExitResult(res);
     } catch (error: any) {
-      const msg = error.response?.data?.message || 'No se encontró un ticket activo para esta placa.';
-      Alert.alert('Error al Registrar Salida', Array.isArray(msg) ? msg.join('\n') : msg);
+      const msg = error.response?.data?.message || 'Vehículo no encontrado en parqueadero.';
+      Alert.alert('Error de Salida', Array.isArray(msg) ? msg.join('\n') : msg);
     } finally {
       setLoading(false);
     }
@@ -97,11 +114,11 @@ export const EntryExitScreen = () => {
     setLoading(true);
     try {
       await paymentsApi.registerCashPayment(exitId);
-      Alert.alert('Pago Confirmado', 'El cobro en efectivo ha sido registrado correctamente.');
+      Alert.alert('Pago Exitoso', 'El cobro en efectivo fue procesado correctamente.');
       setExitResult(null);
       setPlaca('');
     } catch (error: any) {
-      const msg = error.response?.data?.message || 'Error al procesar el pago en efectivo.';
+      const msg = error.response?.data?.message || 'Error procesando cobro.';
       Alert.alert('Error de Pago', Array.isArray(msg) ? msg.join('\n') : msg);
     } finally {
       setLoading(false);
@@ -110,32 +127,31 @@ export const EntryExitScreen = () => {
 
   return (
     <ScrollView style={styles.container} keyboardShouldPersistTaps="handled">
-      {/* Pestañas de Ingreso / Salida */}
       <View style={styles.tabContainer}>
         <TouchableOpacity
           style={[styles.tabButton, tab === 'ENTRY' && styles.activeTab]}
           onPress={() => { setTab('ENTRY'); setExitResult(null); }}
         >
-          <Text style={[styles.tabText, tab === 'ENTRY' && styles.activeTabText]}>Ingreso de Vehículo</Text>
+          <Text style={[styles.tabText, tab === 'ENTRY' && styles.activeTabText]}>Ingreso</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.tabButton, tab === 'EXIT' && styles.activeTab]}
           onPress={() => { setTab('EXIT'); setExitResult(null); }}
         >
-          <Text style={[styles.tabText, tab === 'EXIT' && styles.activeTabText]}>Salida y Cobro</Text>
+          <Text style={[styles.tabText, tab === 'EXIT' && styles.activeTabText]}>Salida</Text>
         </TouchableOpacity>
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.inputLabel}>Placa del Vehículo (6 Caracteres)</Text>
+        <Text style={styles.inputLabel}>Placa del Vehículo (Exactamente 6 Caracteres)</Text>
         <TextInput
           style={styles.placaInput}
           value={placa}
-          onChangeText={(text) => setPlaca(text.toUpperCase())}
+          onChangeText={(text) => setPlaca(text.toUpperCase().trim())}
           placeholder="ABC123"
           placeholderTextColor="#94A3B8"
           autoCapitalize="characters"
-          maxLength={7}
+          maxLength={6}
         />
 
         {tab === 'ENTRY' ? (
@@ -145,7 +161,7 @@ export const EntryExitScreen = () => {
               {[
                 { type: VehicleType.CAR, label: 'Automóvil' },
                 { type: VehicleType.MOTORCYCLE, label: 'Motocicleta' },
-                { type: VehicleType.VAN, label: 'Camioneta / Van' },
+                { type: VehicleType.VAN, label: 'Camioneta/Van' },
               ].map((item) => (
                 <TouchableOpacity
                   key={item.type}
@@ -165,7 +181,7 @@ export const EntryExitScreen = () => {
               disabled={loading}
               activeOpacity={0.8}
             >
-              {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.actionButtonText}>Registrar Ingreso</Text>}
+              {loading ? <ActivityIndicator color="#FFF" /> : <Text style={styles.actionButtonText}>Registrar Ingreso</Text>}
             </TouchableOpacity>
           </>
         ) : (
@@ -176,26 +192,24 @@ export const EntryExitScreen = () => {
               disabled={loading}
               activeOpacity={0.8}
             >
-              {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.actionButtonText}>Buscar Salida</Text>}
+              {loading ? <ActivityIndicator color="#FFF" /> : <Text style={styles.actionButtonText}>Buscar Salida</Text>}
             </TouchableOpacity>
 
             {exitResult && (
               <View style={styles.exitResultBox}>
-                <Text style={styles.exitTitle}>Resumen de Salida</Text>
+                <Text style={styles.exitTitle}>Resumen de Registro de Salida</Text>
                 <Text style={styles.exitDetail}>Placa: {exitResult.ticket?.vehicle?.plate || exitResult.exit?.placa || placa}</Text>
-                <Text style={styles.exitDetail}>
-                  Minutos Permanecidos: {exitResult.exit?.durationMinutes ?? exitResult.minutosTotal ?? 0} mins
-                </Text>
-                <Text style={styles.totalPrice}>
-                  Total a Cobrar: ${(exitResult.exit?.totalAmount ?? exitResult.totalACobrar ?? 0).toLocaleString('es-CO')}
-                </Text>
+                <Text style={styles.exitDetail}>Fecha e Ingreso: {formatDateTime(exitResult.ticket?.entryTime)}</Text>
+                <Text style={styles.exitDetail}>Fecha e Salida: {formatDateTime(exitResult.exit?.exitTime)}</Text>
+                <Text style={styles.exitDetail}>Tiempo Permanecido: {exitResult.exit?.durationMinutes ?? 0} minutos</Text>
+                <Text style={styles.totalPrice}>Total a Cobrar: ${(exitResult.exit?.totalAmount ?? 0).toLocaleString('es-CO')}</Text>
 
                 <TouchableOpacity
                   style={styles.payButton}
-                  onPress={() => handleCashPayment(exitResult.exit?.id || exitResult.id)}
+                  onPress={() => handleCashPayment(exitResult.exit?.id)}
                   disabled={loading}
                 >
-                  <Text style={styles.payButtonText}>Confirmar Cobro en Efectivo</Text>
+                  <Text style={styles.payButtonText}>Cobrar en Efectivo</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -231,7 +245,6 @@ const styles = StyleSheet.create({
   tabText: {
     fontWeight: 'bold',
     color: '#475569',
-    fontSize: 13,
   },
   activeTabText: {
     color: '#FFFFFF',
@@ -249,7 +262,6 @@ const styles = StyleSheet.create({
     color: '#64748B',
     marginBottom: 8,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
   },
   placaInput: {
     borderWidth: 2,
@@ -259,7 +271,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
     paddingVertical: 12,
-    letterSpacing: 3,
+    letterSpacing: 4,
     marginBottom: 20,
     backgroundColor: '#F8FAFC',
     color: '#0F172A',
@@ -277,7 +289,6 @@ const styles = StyleSheet.create({
     borderColor: '#CBD5E1',
     borderRadius: 8,
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
   },
   selectedTypeOption: {
     backgroundColor: '#4F46E5',
