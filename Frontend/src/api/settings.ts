@@ -5,7 +5,7 @@ export const settingsApi = {
    * Obtiene la configuración general del sistema.
    */
   getGeneralConfig: async () => {
-    const response = await apiClient.get('/settings/general');
+    const response = await apiClient.get('/settings');
     return response.data;
   },
 
@@ -13,7 +13,11 @@ export const settingsApi = {
    * Guarda o actualiza tarifas de parqueadero.
    */
   updateTariffs: async (parkingId: string, tariffs: any[]) => {
-    const response = await apiClient.post(`/settings/tarifas/${parkingId}`, { tariffs });
+    const response = await apiClient.put('/settings/tarifas', {
+      aplicarATodos: false,
+      parkingId,
+      tarifas,
+    });
     return response.data;
   },
 
@@ -26,7 +30,9 @@ export const settingsApi = {
     aceptaEnLinea: boolean;
     aceptaQr: boolean;
   }) => {
-    const response = await apiClient.patch('/settings/metodos-pago', config);
+    const response = await apiClient.put('/settings/metodos-pago', {
+      metodosPago: config,
+    });
     return response.data;
   },
 };
