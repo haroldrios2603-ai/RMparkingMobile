@@ -124,8 +124,18 @@ export const ClientsScreen = () => {
 
     const handleRenew = async () => {
       try {
-        await clientsApi.renewContract(item.id, 1);
-        Alert.alert('Contrato Renovado', 'Se ha sumado 1 mes de vigencia al contrato.');
+        const currentEnd = item.fechaFin || item.endDate ? new Date(item.fechaFin || item.endDate) : new Date();
+        const baseDate = currentEnd.getTime() > Date.now() ? currentEnd : new Date();
+        const newEndDate = new Date(baseDate.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
+        const paymentDate = new Date().toISOString();
+        const monthlyFee = item.montoMensual ?? item.monthlyFee ?? 180000;
+
+        await clientsApi.renewContract(item.id, {
+          newEndDate,
+          paymentDate,
+          monthlyFee,
+        });
+        Alert.alert('Contrato Renovado', 'Se ha renovado el contrato exitosamente por 30 días.');
         fetchContracts();
       } catch (error: any) {
         Alert.alert('Error', error.response?.data?.message || 'No se pudo renovar el contrato.');

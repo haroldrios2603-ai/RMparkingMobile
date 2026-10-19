@@ -28,7 +28,7 @@ export const ReportsScreen = () => {
     try {
       const [billingRes, vehiclesRes, incomeRes] = await Promise.all([
         reportsApi.getBillingTotal().catch(() => ({ totalFacturado: 0 })),
-        reportsApi.getVehicleCount().catch(() => ({ totalVehiculos: 0 })),
+        reportsApi.getVehicleCount({ period: 'day' }).catch(() => ({ totalVehiculos: 0 })),
         reportsApi.getIncomeByVehicle().catch(() => ({ desglose: [] })),
       ]);
 

@@ -1,10 +1,11 @@
 /**
  * Configuración de la URL base de la API del Backend NestJS.
- * Usa la variable nativa de Expo `process.env.EXPO_PUBLIC_API_URL` con respaldo automático a Railway.
+ * Utiliza la variable de entorno de Expo con respaldo a desarrollo local o Railway.
  */
 const getBaseUrl = (): string => {
+  const localUrl = 'http://localhost:3000';
   const railwayUrl = 'https://sena-production-757e.up.railway.app';
-  return process.env.EXPO_PUBLIC_API_URL || railwayUrl;
+  return process.env.EXPO_PUBLIC_API_URL || localUrl;
 };
 
 export const API_CONFIG = {

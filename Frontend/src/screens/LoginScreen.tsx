@@ -21,8 +21,9 @@ import { authApi } from '../api/auth';
  */
 export const LoginScreen = () => {
   const { login } = useAuth();
-  const [email, setEmail] = useState('admin@rmparking.com');
-  const [password, setPassword] = useState('123456');
+  // Campos de inicio de sesión vacíos por seguridad (sin credenciales precargadas)
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 

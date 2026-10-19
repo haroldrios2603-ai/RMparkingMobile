@@ -54,18 +54,22 @@ export const AuditScreen = () => {
     }
   };
 
-  const renderAuditItem = ({ item }: { item: AuditLogItem }) => (
-    <View style={styles.logCard}>
-      <View style={styles.cardHeader}>
-        <Text style={styles.operationBadge}>{item.operation}</Text>
-        <Text style={styles.dateText}>
-          {new Date(item.createdAt).toLocaleDateString([], { hour: '2-digit', minute: '2-digit' })}
-        </Text>
+  const renderAuditItem = ({ item }: { item: any }) => {
+    // El backend puede enviar timestamp o createdAt según el log de auditoría
+    const timeValue = item.timestamp || item.createdAt || new Date().toISOString();
+    return (
+      <View style={styles.logCard}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.operationBadge}>{item.operation}</Text>
+          <Text style={styles.dateText}>
+            {new Date(timeValue).toLocaleDateString([], { hour: '2-digit', minute: '2-digit' })}
+          </Text>
+        </View>
+        <Text style={styles.entityText}>Entidad: {item.entity}</Text>
+        {item.userEmail && <Text style={styles.userText}>Usuario: {item.userEmail}</Text>}
       </View>
-      <Text style={styles.entityText}>Entidad: {item.entity}</Text>
-      {item.userEmail && <Text style={styles.userText}>Usuario: {item.userEmail}</Text>}
-    </View>
-  );
+    );
+  };
 
   return (
     <View style={styles.container}>

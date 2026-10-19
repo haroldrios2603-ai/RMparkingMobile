@@ -35,12 +35,13 @@ export const clientsApi = {
   },
 
   /**
-   * Renueva un contrato existente.
+   * Renueva un contrato existente utilizando RenewContractDto (newEndDate, paymentDate, monthlyFee).
    */
-  renewContract: async (contractId: string, meses: number): Promise<ClientContract> => {
-    const response = await apiClient.patch<ClientContract>(`/clients/contracts/${contractId}/renew`, {
-      meses,
-    });
+  renewContract: async (
+    contractId: string,
+    data: { newEndDate: string; paymentDate: string; monthlyFee?: number }
+  ): Promise<ClientContract> => {
+    const response = await apiClient.patch<ClientContract>(`/clients/contracts/${contractId}/renew`, data);
     return response.data;
   },
 

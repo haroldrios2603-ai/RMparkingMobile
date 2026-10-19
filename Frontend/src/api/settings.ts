@@ -2,10 +2,22 @@ import { apiClient } from './client';
 
 export const settingsApi = {
   /**
-   * Obtiene la configuración general del sistema.
+   * Obtiene la configuración general del sistema junto con sedes y tarifas.
    */
   getGeneralConfig: async () => {
     const response = await apiClient.get('/settings');
+    return response.data;
+  },
+
+  /**
+   * Actualiza la configuración general (capacidad, minutos de cortesía, etc.).
+   */
+  updateGeneralConfig: async (config: {
+    capacidadTotal: number;
+    minutosCortesia?: number;
+    [key: string]: any;
+  }) => {
+    const response = await apiClient.put('/settings/general', config);
     return response.data;
   },
 

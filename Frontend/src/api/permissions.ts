@@ -1,5 +1,10 @@
 import { apiClient } from './client';
 
+export interface ScreenPermissionItem {
+  screenKey: string;
+  canView: boolean;
+}
+
 export const permissionsApi = {
   /**
    * Obtiene los permisos efectivos del usuario actual.
@@ -26,9 +31,9 @@ export const permissionsApi = {
   },
 
   /**
-   * Actualiza los permisos asignados a un rol específico.
+   * Actualiza los permisos asignados a un rol específico utilizando UpdateScreenPermissionsDto.
    */
-  updateRolePermissions: async (role: string, permissions: string[]): Promise<any> => {
+  updateRolePermissions: async (role: string, permissions: ScreenPermissionItem[]): Promise<any> => {
     const response = await apiClient.put(`/permissions/roles/${role}`, { permissions });
     return response.data;
   },
@@ -42,9 +47,9 @@ export const permissionsApi = {
   },
 
   /**
-   * Actualiza los permisos específicos de un usuario.
+   * Actualiza los permisos específicos de un usuario utilizando UpdateScreenPermissionsDto.
    */
-  updateUserPermissions: async (userId: string, permissions: string[]): Promise<any> => {
+  updateUserPermissions: async (userId: string, permissions: ScreenPermissionItem[]): Promise<any> => {
     const response = await apiClient.put(`/permissions/users/${userId}`, { permissions });
     return response.data;
   },

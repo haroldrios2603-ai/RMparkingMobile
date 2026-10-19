@@ -45,13 +45,15 @@ export const SettingsScreen = () => {
         parkingApi.getAllParkings().catch(() => []),
       ]);
 
-      if (configData) {
-        if (configData.capacidadTotal) setCapacity(String(configData.capacidadTotal));
-        if (configData.minutosCortesia !== undefined) setCourtesyMinutes(String(configData.minutosCortesia));
-        if (configData.metodosPago) {
-          setCashEnabled(configData.metodosPago.aceptaEfectivo ?? true);
-          setQrEnabled(configData.metodosPago.aceptaQr ?? true);
-          setCardEnabled(configData.metodosPago.aceptaTarjeta ?? true);
+      // El backend devuelve { configuracion, sedes, tarifas }
+      const actualConfig = configData?.configuracion || configData;
+      if (actualConfig) {
+        if (actualConfig.capacidadTotal !== undefined) setCapacity(String(actualConfig.capacidadTotal));
+        if (actualConfig.minutosCortesia !== undefined) setCourtesyMinutes(String(actualConfig.minutosCortesia));
+        if (actualConfig.metodosPago) {
+          setCashEnabled(actualConfig.metodosPago.aceptaEfectivo ?? true);
+          setQrEnabled(actualConfig.metodosPago.aceptaQr ?? true);
+          setCardEnabled(actualConfig.metodosPago.aceptaTarjeta ?? true);
         }
       }
 
@@ -74,7 +76,13 @@ export const SettingsScreen = () => {
   const handleSaveSettings = async () => {
     setSaving(true);
     try {
-      // 1. Guardar Métodos de Pago y Parámetros
+      // 1. Guardar Configuración General (Capacidad y Minutos de Cortesía)
+      await settingsApi.updateGeneralConfig({
+        capacidadTotal: parseInt(capacity, 10) || 50,
+        minutosCortesia: parseInt(courtesyMinutes, 10) || 15,
+      });
+
+      // 2. Guardar Métodos de Pago
       await settingsApi.updatePaymentMethods({
         aceptaEfectivo: cashEnabled,
         aceptaQr: qrEnabled,
@@ -82,7 +90,7 @@ export const SettingsScreen = () => {
         aceptaEnLinea: qrEnabled,
       });
 
-      // 2. Guardar Tarifas si hay sede seleccionada
+      // 3. Guardar Tarifas si hay sede seleccionada
       if (selectedParkingId) {
         await settingsApi.updateTariffs(selectedParkingId, [
           {
@@ -98,7 +106,7 @@ export const SettingsScreen = () => {
         ]);
       }
 
-      Alert.alert('Configuración Guardada', 'Todos los parámetros del parqueadero han sido actualizados.');
+      Alert.alert('Configuración Guardada', 'Todos los parámetros del parqueadero han sido actualizados y persistidos.');
     } catch (error: any) {
       const msg = error.response?.data?.message || 'Error al guardar configuración.';
       Alert.alert('Error', Array.isArray(msg) ? msg.join('\n') : msg);
