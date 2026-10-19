@@ -1,11 +1,12 @@
+import { API_URL_DEV, API_URL_PROD } from '@env';
+
 /**
  * Configuración de la URL base de la API del Backend NestJS.
- * Utiliza la variable de entorno de Expo con respaldo a desarrollo local o Railway.
+ * Garantiza que la APK compilada se conecte siempre al servidor en la nube Railway.
  */
 const getBaseUrl = (): string => {
-  const localUrl = 'http://localhost:3000';
   const railwayUrl = 'https://sena-production-757e.up.railway.app';
-  return process.env.EXPO_PUBLIC_API_URL || localUrl;
+  return process.env.EXPO_PUBLIC_API_URL || API_URL_PROD || API_URL_DEV || railwayUrl;
 };
 
 export const API_CONFIG = {

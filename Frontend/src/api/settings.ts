@@ -28,7 +28,7 @@ export const settingsApi = {
     const response = await apiClient.put('/settings/tarifas', {
       aplicarATodos: false,
       parkingId,
-      tarifas,
+      tarifas: tariffs,
     });
     return response.data;
   },
