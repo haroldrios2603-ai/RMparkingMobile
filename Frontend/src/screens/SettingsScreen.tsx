@@ -25,6 +25,8 @@ export const SettingsScreen = () => {
   // Parámetros Generales
   const [capacity, setCapacity] = useState('50');
   const [courtesyMinutes, setCourtesyMinutes] = useState('15');
+  const [mensajeIngreso, setMensajeIngreso] = useState('Bienvenido a RM Parking');
+  const [mensajeSalida, setMensajeSalida] = useState('Gracias por su visita');
 
   // Métodos de Pago
   const [cashEnabled, setCashEnabled] = useState(true);
@@ -35,6 +37,10 @@ export const SettingsScreen = () => {
   const [selectedParkingId, setSelectedParkingId] = useState('');
   const [carBaseRate, setCarBaseRate] = useState('2000');
   const [carHourlyRate, setCarHourlyRate] = useState('2000');
+  const [carNightRate, setCarNightRate] = useState('15000');
+  const [nightStart, setNightStart] = useState('20:00');
+  const [nightEnd, setNightEnd] = useState('06:00');
+
   const [motoBaseRate, setMotoBaseRate] = useState('1000');
   const [motoHourlyRate, setMotoHourlyRate] = useState('1000');
 
@@ -46,12 +52,17 @@ export const SettingsScreen = () => {
       ]);
 
       if (configData) {
-        if (configData.capacidadTotal) setCapacity(String(configData.capacidadTotal));
-        if (configData.minutosCortesia !== undefined) setCourtesyMinutes(String(configData.minutosCortesia));
-        if (configData.metodosPago) {
-          setCashEnabled(configData.metodosPago.aceptaEfectivo ?? true);
-          setQrEnabled(configData.metodosPago.aceptaQr ?? true);
-          setCardEnabled(configData.metodosPago.aceptaTarjeta ?? true);
+        const config = configData.configuracion || configData;
+        if (config.capacidadTotal) setCapacity(String(config.capacidadTotal));
+        if (config.minutosCortesia !== undefined) setCourtesyMinutes(String(config.minutosCortesia));
+        if (config.mensajesOperativos) {
+          setMensajeIngreso(config.mensajesOperativos.mensajeIngreso || 'Bienvenido a RM Parking');
+          setMensajeSalida(config.mensajesOperativos.mensajeSalida || 'Gracias por su visita');
+        }
+        if (config.metodosPago) {
+          setCashEnabled(config.metodosPago.aceptaEfectivo ?? true);
+          setQrEnabled(config.metodosPago.aceptaQr ?? true);
+          setCardEnabled(config.metodosPago.aceptaTarjeta ?? true);
         }
       }
 
@@ -74,7 +85,7 @@ export const SettingsScreen = () => {
   const handleSaveSettings = async () => {
     setSaving(true);
     try {
-      // 1. Guardar Métodos de Pago y Parámetros
+      // 1. Guardar Métodos de Pago
       await settingsApi.updatePaymentMethods({
         aceptaEfectivo: cashEnabled,
         aceptaQr: qrEnabled,
@@ -82,13 +93,26 @@ export const SettingsScreen = () => {
         aceptaEnLinea: qrEnabled,
       });
 
-      // 2. Guardar Tarifas si hay sede seleccionada
+      // 2. Guardar Parámetros Generales
+      await settingsApi.updateGeneralConfig({
+        capacidadTotal: parseInt(capacity, 10) || 50,
+        minutosCortesia: parseInt(courtesyMinutes, 10) || 15,
+        mensajesOperativos: {
+          mensajeIngreso,
+          mensajeSalida,
+        },
+      });
+
+      // 3. Guardar Tarifas si hay sede seleccionada
       if (selectedParkingId) {
         await settingsApi.updateTariffs(selectedParkingId, [
           {
             tipoVehiculo: 'CAR',
             tarifaBase: parseFloat(carBaseRate) || 2000,
             tarifaHora: parseFloat(carHourlyRate) || 2000,
+            tarifaNocturna: parseFloat(carNightRate) || 15000,
+            horaInicioNocturna: nightStart,
+            horaFinNocturna: nightEnd,
           },
           {
             tipoVehiculo: 'MOTORCYCLE',
@@ -98,7 +122,7 @@ export const SettingsScreen = () => {
         ]);
       }
 
-      Alert.alert('Configuración Guardada', 'Todos los parámetros del parqueadero han sido actualizados.');
+      Alert.alert('Configuración Guardada', 'Todos los parámetros del parqueadero han sido actualizados en NestJS.');
     } catch (error: any) {
       const msg = error.response?.data?.message || 'Error al guardar configuración.';
       Alert.alert('Error', Array.isArray(msg) ? msg.join('\n') : msg);
@@ -176,6 +200,33 @@ export const SettingsScreen = () => {
               </View>
             </View>
 
+            <View style={styles.inputRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.inputLabel}>Tarifa Nocturna (COP)</Text>
+                <TextInput
+                  style={styles.input}
+                  value={carNightRate}
+                  onChangeText={setCarNightRate}
+                  keyboardType="numeric"
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.inputLabel}>Horario Nocturno (HH:mm)</Text>
+                <TextInput
+                  style={styles.input}
+                  value={`${nightStart}-${nightEnd}`}
+                  onChangeText={(val) => {
+                    const parts = val.split('-');
+                    if (parts.length === 2) {
+                      setNightStart(parts[0].trim());
+                      setNightEnd(parts[1].trim());
+                    }
+                  }}
+                  placeholder="20:00-06:00"
+                />
+              </View>
+            </View>
+
             <Text style={[styles.subSectionTitle, { marginTop: 14 }]}>Motocicleta (MOTORCYCLE)</Text>
             <View style={styles.inputRow}>
               <View style={{ flex: 1 }}>
@@ -223,6 +274,22 @@ export const SettingsScreen = () => {
                 />
               </View>
             </View>
+
+            <Text style={[styles.inputLabel, { marginTop: 12 }]}>Mensaje de Ingreso Ticket</Text>
+            <TextInput
+              style={styles.input}
+              value={mensajeIngreso}
+              onChangeText={setMensajeIngreso}
+              placeholder="Bienvenido a RM Parking"
+            />
+
+            <Text style={[styles.inputLabel, { marginTop: 12 }]}>Mensaje de Salida Ticket</Text>
+            <TextInput
+              style={styles.input}
+              value={mensajeSalida}
+              onChangeText={setMensajeSalida}
+              placeholder="Gracias por su visita"
+            />
           </View>
 
           <TouchableOpacity
@@ -290,6 +357,7 @@ const styles = StyleSheet.create({
   inputRow: {
     flexDirection: 'row',
     gap: 12,
+    marginBottom: 10,
   },
   inputLabel: {
     fontSize: 11,
