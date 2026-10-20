@@ -32,6 +32,8 @@ export const UsersScreen = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedRoleFilter, setSelectedRoleFilter] = useState<string>('ALL');
 
   // Formulario Completo
   const [createModalVisible, setCreateModalVisible] = useState(false);
@@ -46,7 +48,11 @@ export const UsersScreen = () => {
 
   const fetchUsers = async () => {
     try {
-      const list = await usersApi.getUsers();
+      const filters: any = {};
+      if (selectedRoleFilter !== 'ALL') {
+        filters.role = selectedRoleFilter;
+      }
+      const list = await usersApi.getUsers(filters);
       setUsers(list || []);
     } catch (error) {
       console.error('Error cargando usuarios:', error);
@@ -59,8 +65,16 @@ export const UsersScreen = () => {
   useFocusEffect(
     useCallback(() => {
       fetchUsers();
-    }, [])
+    }, [selectedRoleFilter])
   );
+
+  const filteredUsers = users.filter((u: any) => {
+    const query = searchQuery.toLowerCase().trim();
+    if (!query) return true;
+    const nameStr = (u.fullName || u.name || '').toLowerCase();
+    const emailStr = (u.email || '').toLowerCase();
+    return nameStr.includes(query) || emailStr.includes(query);
+  });
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -252,16 +266,42 @@ export const UsersScreen = () => {
         </TouchableOpacity>
       </View>
 
+      {/* Barra de Búsqueda y Filtro por Rol */}
+      <View style={{ marginBottom: 12 }}>
+        <TextInput
+          style={styles.searchInput}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholder="Buscar por nombre o correo..."
+          placeholderTextColor="#94A3B8"
+        />
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }}>
+          <View style={styles.filterChipRow}>
+            {['ALL', Role.OPERATOR, Role.ADMIN_PARKING, Role.SUPER_ADMIN, Role.AUDITOR].map((r) => (
+              <TouchableOpacity
+                key={r}
+                style={[styles.filterChip, selectedRoleFilter === r && styles.selectedFilterChip]}
+                onPress={() => setSelectedRoleFilter(r)}
+              >
+                <Text style={[styles.filterChipText, selectedRoleFilter === r && styles.selectedFilterChipText]}>
+                  {r === 'ALL' ? 'Todos' : r}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </ScrollView>
+      </View>
+
       {loading ? (
         <ActivityIndicator size="large" color="#6366F1" style={{ marginTop: 40 }} />
       ) : (
         <FlatList
-          data={users}
+          data={filteredUsers}
           keyExtractor={(item) => item.id}
           renderItem={renderUserItem}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           ListEmptyComponent={
-            <Text style={styles.emptyText}>No hay usuarios registrados.</Text>
+            <Text style={styles.emptyText}>No hay usuarios que coincidan con la búsqueda.</Text>
           }
           contentContainerStyle={{ paddingBottom: 20 }}
         />
@@ -480,6 +520,37 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: 'bold',
     fontSize: 13,
+  },
+  searchInput: {
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 14,
+    backgroundColor: '#FFFFFF',
+    color: '#0F172A',
+  },
+  filterChipRow: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  filterChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    backgroundColor: '#E2E8F0',
+  },
+  selectedFilterChip: {
+    backgroundColor: '#4F46E5',
+  },
+  filterChipText: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    color: '#475569',
+  },
+  selectedFilterChipText: {
+    color: '#FFFFFF',
   },
   userCard: {
     backgroundColor: '#FFFFFF',

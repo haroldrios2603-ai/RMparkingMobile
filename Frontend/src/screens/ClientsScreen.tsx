@@ -27,6 +27,8 @@ export const ClientsScreen = () => {
   const [parkings, setParkings] = useState<Parking[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVO' | 'VENCIDO'>('ALL');
 
   // Formulario de Nuevo Cliente Mensual
   const [modalVisible, setModalVisible] = useState(false);
@@ -57,6 +59,21 @@ export const ClientsScreen = () => {
       setRefreshing(false);
     }
   };
+
+  const filteredContracts = contracts.filter((c: any) => {
+    const query = searchQuery.toLowerCase().trim();
+    const nameStr = (c.user?.fullName || c.user?.email || c.client?.nombre || c.placa || '').toLowerCase();
+    const matchesQuery = !query || nameStr.includes(query);
+
+    const estado = c.estado || c.status || 'ACTIVO';
+    const isActivo = estado === 'ACTIVO' || estado === 'ACTIVE';
+    const matchesStatus =
+      statusFilter === 'ALL' ||
+      (statusFilter === 'ACTIVO' && isActivo) ||
+      (statusFilter === 'VENCIDO' && !isActivo);
+
+    return matchesQuery && matchesStatus;
+  });
 
   useFocusEffect(
     useCallback(() => {
@@ -254,16 +271,40 @@ export const ClientsScreen = () => {
         </TouchableOpacity>
       </View>
 
+      {/* Barra de Búsqueda y Filtros de Estado */}
+      <View style={{ marginBottom: 12 }}>
+        <TextInput
+          style={styles.searchInput}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholder="Buscar por cliente o placa..."
+          placeholderTextColor="#94A3B8"
+        />
+        <View style={styles.filterChipRow}>
+          {(['ALL', 'ACTIVO', 'VENCIDO'] as const).map((st) => (
+            <TouchableOpacity
+              key={st}
+              style={[styles.filterChip, statusFilter === st && styles.selectedFilterChip]}
+              onPress={() => setStatusFilter(st)}
+            >
+              <Text style={[styles.filterChipText, statusFilter === st && styles.selectedFilterChipText]}>
+                {st === 'ALL' ? 'Todos' : st}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+
       {loading ? (
         <ActivityIndicator size="large" color="#6366F1" style={{ marginTop: 20 }} />
       ) : (
         <FlatList
-          data={contracts}
+          data={filteredContracts}
           keyExtractor={(item) => item.id}
           renderItem={renderContractItem}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           ListEmptyComponent={
-            <Text style={styles.emptyText}>No hay contratos de mensualidad registrados.</Text>
+            <Text style={styles.emptyText}>No hay contratos que coincidan con los criterios de búsqueda.</Text>
           }
           contentContainerStyle={{ paddingBottom: 20 }}
         />
@@ -435,6 +476,38 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: 'bold',
     fontSize: 13,
+  },
+  searchInput: {
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 14,
+    backgroundColor: '#FFFFFF',
+    color: '#0F172A',
+    marginBottom: 8,
+  },
+  filterChipRow: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  filterChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    backgroundColor: '#E2E8F0',
+  },
+  selectedFilterChip: {
+    backgroundColor: '#4F46E5',
+  },
+  filterChipText: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    color: '#475569',
+  },
+  selectedFilterChipText: {
+    color: '#FFFFFF',
   },
   contractCard: {
     backgroundColor: '#FFFFFF',

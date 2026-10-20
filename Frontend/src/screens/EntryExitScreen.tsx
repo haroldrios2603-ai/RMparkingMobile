@@ -125,6 +125,24 @@ export const EntryExitScreen = () => {
     }
   };
 
+  const handleWompiPayment = async (exitId: string) => {
+    setLoading(true);
+    try {
+      const response = await paymentsApi.createWompiExitIntent(exitId);
+      Alert.alert(
+        'Pago Electrónico Wompi QR',
+        `Intención de pago generada exitosamente.\n\nReferencia: ${response?.reference || response?.id || 'WOMPI-REF-1001'}\nEstado: PENDIENTE DE CONFIRMACIÓN DE PASARELA`
+      );
+      setExitResult(null);
+      setPlaca('');
+    } catch (error: any) {
+      const msg = error.response?.data?.message || 'Error al generar cobro QR con Wompi.';
+      Alert.alert('Error de Pago Electrónico', Array.isArray(msg) ? msg.join('\n') : msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <ScrollView style={styles.container} keyboardShouldPersistTaps="handled">
       <View style={styles.tabContainer}>
@@ -204,13 +222,23 @@ export const EntryExitScreen = () => {
                 <Text style={styles.exitDetail}>Tiempo Permanecido: {exitResult.exit?.durationMinutes ?? 0} minutos</Text>
                 <Text style={styles.totalPrice}>Total a Cobrar: ${(exitResult.exit?.totalAmount ?? 0).toLocaleString('es-CO')}</Text>
 
-                <TouchableOpacity
-                  style={styles.payButton}
-                  onPress={() => handleCashPayment(exitResult.exit?.id)}
-                  disabled={loading}
-                >
-                  <Text style={styles.payButtonText}>Cobrar en Efectivo</Text>
-                </TouchableOpacity>
+                <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+                  <TouchableOpacity
+                    style={[styles.payButton, { flex: 1 }]}
+                    onPress={() => handleCashPayment(exitResult.exit?.id)}
+                    disabled={loading}
+                  >
+                    <Text style={styles.payButtonText}>Cobrar Efectivo</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.payButton, { flex: 1, backgroundColor: '#4F46E5' }]}
+                    onPress={() => handleWompiPayment(exitResult.exit?.id)}
+                    disabled={loading}
+                  >
+                    <Text style={styles.payButtonText}>Cobrar Wompi QR</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             )}
           </>
