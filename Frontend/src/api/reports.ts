@@ -1,8 +1,8 @@
 import { apiClient } from './client';
 
 export interface DateRangeQuery {
-  startDate?: string;
-  endDate?: string;
+  from?: string;
+  to?: string;
 }
 
 export const reportsApi = {
@@ -31,10 +31,25 @@ export const reportsApi = {
   },
 
   /**
-   * Obtiene estado de mensualidades del período.
+   * Obtiene las horas pico y días de mayor afluencia.
    */
-  getMonthlyStatus: async () => {
-    const response = await apiClient.get('/reports/monthly-payments/status');
+  getPeakHours: async (params?: DateRangeQuery) => {
+    const response = await apiClient.get('/reports/peak', { params });
     return response.data;
+  },
+
+  /**
+   * Obtiene lista de trabajadores en turno.
+   */
+  getWorkersOnShift: async () => {
+    const response = await apiClient.get('/reports/workers/present');
+    return response.data;
+  },
+
+  /**
+   * Genera el enlace directo de exportación de reporte.
+   */
+  getExportUrl: (reportType: string, format: 'pdf' | 'excel' | 'word') => {
+    return `${apiClient.defaults.baseURL}/reports/export?reportType=${reportType}&format=${format}`;
   },
 };

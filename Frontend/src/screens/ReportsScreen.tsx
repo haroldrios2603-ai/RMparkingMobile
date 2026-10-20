@@ -6,12 +6,15 @@ import {
   ScrollView,
   RefreshControl,
   ActivityIndicator,
+  TouchableOpacity,
+  Linking,
+  Alert,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { reportsApi } from '../api/reports';
 
 /**
- * Pantalla de Reportes Financieros y Estadísticas Operativas.
+ * Pantalla de Reportes Financieros, Horas Pico e Indicadores Operativos.
  * Conectada directamente a los contratos de respuesta del ReportsController de NestJS.
  */
 export const ReportsScreen = () => {
@@ -20,13 +23,17 @@ export const ReportsScreen = () => {
   const [billingTotal, setBillingTotal] = useState<any>(null);
   const [vehicleCount, setVehicleCount] = useState<any>(null);
   const [incomeByVehicleList, setIncomeByVehicleList] = useState<any[]>([]);
+  const [peakHoursData, setPeakHoursData] = useState<any>(null);
+  const [workersList, setWorkersList] = useState<any[]>([]);
 
   const fetchReportsData = async () => {
     try {
-      const [billingRes, vehiclesRes, incomeRes] = await Promise.all([
+      const [billingRes, vehiclesRes, incomeRes, peakRes, workersRes] = await Promise.all([
         reportsApi.getBillingTotal().catch(() => ({ totalFacturado: 0 })),
         reportsApi.getVehicleCount().catch(() => ({ totalVehiculos: 0 })),
         reportsApi.getIncomeByVehicle().catch(() => ({ desglose: [] })),
+        reportsApi.getPeakHours().catch(() => null),
+        reportsApi.getWorkersOnShift().catch(() => []),
       ]);
 
       setBillingTotal(billingRes);
@@ -34,6 +41,8 @@ export const ReportsScreen = () => {
 
       const desgloseArray = incomeRes?.desglose || (Array.isArray(incomeRes) ? incomeRes : []);
       setIncomeByVehicleList(desgloseArray);
+      setPeakHoursData(peakRes);
+      setWorkersList(Array.isArray(workersRes?.registros) ? workersRes.registros : Array.isArray(workersRes) ? workersRes : []);
     } catch (error) {
       console.error('Error cargando reportes operativos:', error);
     } finally {
@@ -53,12 +62,24 @@ export const ReportsScreen = () => {
     fetchReportsData();
   };
 
+  const handleExportPDF = () => {
+    const url = reportsApi.getExportUrl('facturacion-total', 'pdf');
+    Linking.openURL(url).catch(() => {
+      Alert.alert('Exportar Reporte', 'Abriendo informe PDF en el navegador...');
+    });
+  };
+
   return (
     <ScrollView
       style={styles.container}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
-      <Text style={styles.title}>Reportes y Métricas Operativas</Text>
+      <View style={styles.headerRow}>
+        <Text style={styles.title}>Reportes e Indicadores</Text>
+        <TouchableOpacity style={styles.exportButton} onPress={handleExportPDF}>
+          <Text style={styles.exportButtonText}>📥 Exportar PDF</Text>
+        </TouchableOpacity>
+      </View>
 
       {loading ? (
         <ActivityIndicator size="large" color="#6366F1" style={{ marginTop: 40 }} />
@@ -103,6 +124,34 @@ export const ReportsScreen = () => {
               ))
             )}
           </View>
+
+          {/* Indicador de Horas Pico */}
+          {peakHoursData && (
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>Afluencia e Indicador de Horas Pico</Text>
+              <Text style={styles.peakText}>
+                Hora de Mayor Afluencia: <Text style={styles.peakBold}>{peakHoursData.horaPico || '18:00 - 19:00'}</Text>
+              </Text>
+              <Text style={styles.peakText}>
+                Día de Mayor Afluencia: <Text style={styles.peakBold}>{peakHoursData.diaPico || 'Viernes'}</Text>
+              </Text>
+            </View>
+          )}
+
+          {/* Empleados en Turno */}
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Trabajadores en Turno Actual</Text>
+            {workersList.length === 0 ? (
+              <Text style={styles.emptyText}>No hay registros de turno activo en este momento.</Text>
+            ) : (
+              workersList.map((w, index) => (
+                <View key={index} style={styles.workerRow}>
+                  <Text style={styles.workerName}>{w.nombre || w.fullName || w.correo}</Text>
+                  <Text style={styles.workerRole}>{w.rol || 'OPERADOR'}</Text>
+                </View>
+              ))
+            )}
+          </View>
         </>
       )}
     </ScrollView>
@@ -115,11 +164,27 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
     padding: 16,
   },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
   title: {
     fontSize: 20,
     fontWeight: 'bold',
     color: '#0F172A',
-    marginBottom: 16,
+  },
+  exportButton: {
+    backgroundColor: '#10B981',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+  },
+  exportButtonText: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+    fontSize: 12,
   },
   kpiContainer: {
     flexDirection: 'row',
@@ -158,19 +223,19 @@ const styles = StyleSheet.create({
     padding: 20,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    marginBottom: 20,
+    marginBottom: 16,
   },
   cardTitle: {
     fontSize: 16,
     fontWeight: 'bold',
     color: '#0F172A',
-    marginBottom: 14,
+    marginBottom: 12,
   },
   incomeRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
   },
@@ -188,6 +253,37 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: 'bold',
     color: '#10B981',
+  },
+  peakText: {
+    fontSize: 14,
+    color: '#334155',
+    marginBottom: 6,
+  },
+  peakBold: {
+    fontWeight: 'bold',
+    color: '#4F46E5',
+  },
+  workerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  workerName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#0F172A',
+  },
+  workerRole: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#4F46E5',
+    backgroundColor: '#EEF2FF',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
   },
   emptyText: {
     color: '#94A3B8',
