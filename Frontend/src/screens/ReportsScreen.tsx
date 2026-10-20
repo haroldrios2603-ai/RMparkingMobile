@@ -15,7 +15,7 @@ import { reportsApi } from '../api/reports';
 
 /**
  * Pantalla de Reportes Financieros, Horas Pico e Indicadores Operativos.
- * Conectada directamente a los contratos de respuesta del ReportsController de NestJS.
+ * Conectada a las respuestas del ReportsController de NestJS con manejo independiente de errores y permisos.
  */
 export const ReportsScreen = () => {
   const [loading, setLoading] = useState(true);
@@ -28,12 +28,13 @@ export const ReportsScreen = () => {
 
   const fetchReportsData = async () => {
     try {
+      // Consultar cada reporte de forma independiente para evitar colapsar la pantalla si un permiso no está otorgado
       const [billingRes, vehiclesRes, incomeRes, peakRes, workersRes] = await Promise.all([
         reportsApi.getBillingTotal().catch(() => ({ totalFacturado: 0 })),
         reportsApi.getVehicleCount().catch(() => ({ totalVehiculos: 0 })),
-        reportsApi.getIncomeByVehicle().catch(() => ({ desglose: [] })),
+        reportsApi.getIncomeByVehicle().catch(() => ({ totalIngresos: 0, desglose: [] })),
         reportsApi.getPeakHours().catch(() => null),
-        reportsApi.getWorkersOnShift().catch(() => []),
+        reportsApi.getWorkersOnShift().catch(() => ({ registros: [] })),
       ]);
 
       setBillingTotal(billingRes);
@@ -42,7 +43,13 @@ export const ReportsScreen = () => {
       const desgloseArray = incomeRes?.desglose || (Array.isArray(incomeRes) ? incomeRes : []);
       setIncomeByVehicleList(desgloseArray);
       setPeakHoursData(peakRes);
-      setWorkersList(Array.isArray(workersRes?.registros) ? workersRes.registros : Array.isArray(workersRes) ? workersRes : []);
+
+      const workersArray = Array.isArray(workersRes?.registros)
+        ? workersRes.registros
+        : Array.isArray(workersRes)
+        ? workersRes
+        : [];
+      setWorkersList(workersArray);
     } catch (error) {
       console.error('Error cargando reportes operativos:', error);
     } finally {
@@ -65,7 +72,7 @@ export const ReportsScreen = () => {
   const handleExportPDF = () => {
     const url = reportsApi.getExportUrl('facturacion-total', 'pdf');
     Linking.openURL(url).catch(() => {
-      Alert.alert('Exportar Reporte', 'Abriendo informe PDF en el navegador...');
+      Alert.alert('Exportación de Reporte', 'Iniciando descarga del informe PDF...');
     });
   };
 
@@ -76,7 +83,7 @@ export const ReportsScreen = () => {
     >
       <View style={styles.headerRow}>
         <Text style={styles.title}>Reportes e Indicadores</Text>
-        <TouchableOpacity style={styles.exportButton} onPress={handleExportPDF}>
+        <TouchableOpacity style={styles.exportButton} onPress={handleExportPDF} activeOpacity={0.8}>
           <Text style={styles.exportButtonText}>📥 Exportar PDF</Text>
         </TouchableOpacity>
       </View>
@@ -111,7 +118,11 @@ export const ReportsScreen = () => {
                 <View key={index} style={styles.incomeRow}>
                   <View>
                     <Text style={styles.vehicleTypeLabel}>
-                      {item.tipoVehiculo === 'CAR' ? 'Automóviles' : item.tipoVehiculo === 'MOTORCYCLE' ? 'Motocicletas' : item.tipoVehiculo || 'General'}
+                      {item.tipoVehiculo === 'CAR'
+                        ? 'Automóviles'
+                        : item.tipoVehiculo === 'MOTORCYCLE'
+                        ? 'Motocicletas'
+                        : item.tipoVehiculo || 'General'}
                     </Text>
                     {item.cantidadServicios !== undefined && (
                       <Text style={styles.vehicleServicesText}>{item.cantidadServicios} servicios realizados</Text>
@@ -147,7 +158,7 @@ export const ReportsScreen = () => {
               workersList.map((w, index) => (
                 <View key={index} style={styles.workerRow}>
                   <Text style={styles.workerName}>{w.nombre || w.fullName || w.correo}</Text>
-                  <Text style={styles.workerRole}>{w.rol || 'OPERADOR'}</Text>
+                  <Text style={styles.workerRole}>{w.rol || w.role || 'OPERADOR'}</Text>
                 </View>
               ))
             )}
