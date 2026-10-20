@@ -79,9 +79,39 @@ export const AuditScreen = () => {
     </TouchableOpacity>
   );
 
+  const [exporting, setExporting] = useState(false);
+
+  // Maneja la exportación del historial de auditoría en formato CSV
+  const handleExportCSV = async () => {
+    setExporting(true);
+    try {
+      await auditApi.exportLogs({ format: 'csv' });
+      Alert.alert('Exportación Exitosa', 'El historial de auditoría ha sido exportado en formato CSV.');
+    } catch (error: any) {
+      const msg = error.response?.data?.message || 'Error al exportar auditoría.';
+      Alert.alert('Error', Array.isArray(msg) ? msg.join('\n') : msg);
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Historial de Auditoría</Text>
+      <View style={styles.headerRow}>
+        <Text style={styles.title}>Historial de Auditoría</Text>
+        <TouchableOpacity
+          style={styles.exportButton}
+          onPress={handleExportCSV}
+          disabled={exporting}
+          activeOpacity={0.8}
+        >
+          {exporting ? (
+            <ActivityIndicator color="#FFFFFF" size="small" />
+          ) : (
+            <Text style={styles.exportButtonText}>📥 Exportar CSV</Text>
+          )}
+        </TouchableOpacity>
+      </View>
 
       {/* Selector de Filtros de Operación */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScrollView}>
@@ -168,11 +198,27 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
     padding: 16,
   },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
   title: {
     fontSize: 20,
     fontWeight: 'bold',
     color: '#0F172A',
-    marginBottom: 12,
+  },
+  exportButton: {
+    backgroundColor: '#10B981',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+  },
+  exportButtonText: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+    fontSize: 12,
   },
   filterScrollView: {
     flexGrow: 0,

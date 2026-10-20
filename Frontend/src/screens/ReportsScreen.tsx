@@ -20,20 +20,24 @@ import { reportsApi } from '../api/reports';
 export const ReportsScreen = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedPeriod, setSelectedPeriod] = useState<'day' | 'week' | 'month'>('day');
   const [billingTotal, setBillingTotal] = useState<any>(null);
   const [vehicleCount, setVehicleCount] = useState<any>(null);
   const [incomeByVehicleList, setIncomeByVehicleList] = useState<any[]>([]);
   const [peakHoursData, setPeakHoursData] = useState<any>(null);
   const [workersList, setWorkersList] = useState<any[]>([]);
 
+  // Consulta los reportes y KPIs según el período seleccionado
   const fetchReportsData = async () => {
     try {
-      // Consultar cada reporte de forma independiente para evitar colapsar la pantalla si un permiso no está otorgado
+      setLoading(true);
+      const queryParams = { period: selectedPeriod };
+
       const [billingRes, vehiclesRes, incomeRes, peakRes, workersRes] = await Promise.all([
-        reportsApi.getBillingTotal().catch(() => ({ totalFacturado: 0 })),
-        reportsApi.getVehicleCount().catch(() => ({ totalVehiculos: 0 })),
-        reportsApi.getIncomeByVehicle().catch(() => ({ totalIngresos: 0, desglose: [] })),
-        reportsApi.getPeakHours().catch(() => null),
+        reportsApi.getBillingTotal(queryParams).catch(() => ({ totalFacturado: 0 })),
+        reportsApi.getVehicleCount(queryParams).catch(() => ({ totalVehiculos: 0 })),
+        reportsApi.getIncomeByVehicle(queryParams).catch(() => ({ totalIngresos: 0, desglose: [] })),
+        reportsApi.getPeakIndicators(queryParams).catch(() => null),
         reportsApi.getWorkersOnShift().catch(() => ({ registros: [] })),
       ]);
 
@@ -61,7 +65,7 @@ export const ReportsScreen = () => {
   useFocusEffect(
     useCallback(() => {
       fetchReportsData();
-    }, [])
+    }, [selectedPeriod])
   );
 
   const onRefresh = () => {
@@ -86,6 +90,25 @@ export const ReportsScreen = () => {
         <TouchableOpacity style={styles.exportButton} onPress={handleExportPDF} activeOpacity={0.8}>
           <Text style={styles.exportButtonText}>📥 Exportar PDF</Text>
         </TouchableOpacity>
+      </View>
+
+      {/* Selector de Período de Reporte */}
+      <View style={styles.periodRow}>
+        {[
+          { key: 'day', label: 'Hoy / Día' },
+          { key: 'week', label: 'Esta Semana' },
+          { key: 'month', label: 'Este Mes' },
+        ].map((p) => (
+          <TouchableOpacity
+            key={p.key}
+            style={[styles.periodTab, selectedPeriod === p.key && styles.selectedPeriodTab]}
+            onPress={() => setSelectedPeriod(p.key as any)}
+          >
+            <Text style={[styles.periodTabText, selectedPeriod === p.key && styles.selectedPeriodTabText]}>
+              {p.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
       </View>
 
       {loading ? (
@@ -196,6 +219,32 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: 'bold',
     fontSize: 12,
+  },
+  periodRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 16,
+  },
+  periodTab: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+  },
+  selectedPeriodTab: {
+    backgroundColor: '#4F46E5',
+    borderColor: '#4F46E5',
+  },
+  periodTabText: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    color: '#475569',
+  },
+  selectedPeriodTabText: {
+    color: '#FFFFFF',
   },
   kpiContainer: {
     flexDirection: 'row',
