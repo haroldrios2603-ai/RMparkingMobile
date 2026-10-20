@@ -112,22 +112,136 @@ export const UsersScreen = () => {
     setDocumentType(DocumentType.CEDULA);
   };
 
-  const renderUserItem = ({ item }: { item: any }) => (
-    <View style={styles.userCard}>
-      <View style={styles.cardHeader}>
-        <Text style={styles.userName}>{item.fullName || item.name || item.email}</Text>
-        <View style={styles.roleBadge}>
-          <Text style={styles.roleBadgeText}>{item.role}</Text>
+  // Formulario de Edición
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
+  const [editFullName, setEditFullName] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [editContactPhone, setEditContactPhone] = useState('');
+  const [editRole, setEditRole] = useState<Role>(Role.OPERATOR);
+
+  const openEditModal = (user: any) => {
+    setEditingUserId(user.id);
+    setEditFullName(user.fullName || user.name || '');
+    setEditEmail(user.email || '');
+    setEditContactPhone(user.contactPhone || user.phone || '');
+    setEditRole(user.role || Role.OPERATOR);
+    setEditModalVisible(true);
+  };
+
+  const handleUpdateUser = async () => {
+    if (!editingUserId || !editFullName.trim() || !editEmail.trim()) {
+      Alert.alert('Campos Incompletos', 'Nombre y correo electrónico son requeridos.');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await usersApi.updateUser(editingUserId, {
+        fullName: editFullName.trim(),
+        email: editEmail.trim(),
+        contactPhone: editContactPhone.trim(),
+        role: editRole,
+      });
+
+      Alert.alert('Usuario Actualizado', 'Los datos del usuario han sido guardados correctamente.');
+      setEditModalVisible(false);
+      setEditingUserId(null);
+      fetchUsers();
+    } catch (error: any) {
+      const msg = error.response?.data?.message || 'Error al actualizar usuario.';
+      Alert.alert('Error', Array.isArray(msg) ? msg.join('\n') : msg);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const renderUserItem = ({ item }: { item: any }) => {
+    const isActive = item.isActive !== false;
+
+    const handleToggleStatus = async () => {
+      try {
+        await usersApi.updateUserStatus(item.id, !isActive);
+        Alert.alert('Estado Actualizado', `El usuario ahora está ${!isActive ? 'ACTIVO' : 'INACTIVO'}.`);
+        fetchUsers();
+      } catch (error: any) {
+        Alert.alert('Error', error.response?.data?.message || 'No se pudo cambiar el estado.');
+      }
+    };
+
+    const handleDelete = async () => {
+      Alert.alert(
+        'Confirmar Archivo',
+        `¿Estás seguro de archivar al usuario ${item.fullName || item.email}?`,
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          {
+            text: 'Archivar',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                await usersApi.deleteUser(item.id);
+                Alert.alert('Archivado', 'El usuario ha sido archivado correctamente.');
+                fetchUsers();
+              } catch (error: any) {
+                Alert.alert('Error', error.response?.data?.message || 'No se pudo archivar el usuario.');
+              }
+            },
+          },
+        ]
+      );
+    };
+
+    const handleRestore = async () => {
+      try {
+        await usersApi.restoreUser(item.id);
+        Alert.alert('Restaurado', 'El usuario ha sido restaurado exitosamente.');
+        fetchUsers();
+      } catch (error: any) {
+        Alert.alert('Error', error.response?.data?.message || 'No se pudo restaurar el usuario.');
+      }
+    };
+
+    return (
+      <View style={styles.userCard}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.userName}>{item.fullName || item.name || item.email}</Text>
+          <View style={styles.roleBadge}>
+            <Text style={styles.roleBadgeText}>{item.role}</Text>
+          </View>
+        </View>
+
+        <Text style={styles.userEmail}>Correo: {item.email}</Text>
+        <Text style={styles.userDetail}>
+          Documento: {item.documentType || 'CC'} - {item.documentNumber || 'Sin registrar'}
+        </Text>
+        <Text style={styles.userDetail}>Teléfono: {item.contactPhone || item.phone || 'Sin registrar'}</Text>
+        <Text style={[styles.userDetail, { color: isActive ? '#059669' : '#DC2626', fontWeight: 'bold' }]}>
+          Estado: {isActive ? 'ACTIVO' : 'INACTIVO / ARCHIVADO'}
+        </Text>
+
+        <View style={styles.cardActionsRow}>
+          <TouchableOpacity style={[styles.cardActionButton, { backgroundColor: '#4F46E5' }]} onPress={() => openEditModal(item)}>
+            <Text style={styles.cardActionText}>Editar</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={[styles.cardActionButton, { backgroundColor: isActive ? '#F59E0B' : '#10B981' }]} onPress={handleToggleStatus}>
+            <Text style={styles.cardActionText}>{isActive ? 'Inactivar' : 'Activar'}</Text>
+          </TouchableOpacity>
+
+          {isActive ? (
+            <TouchableOpacity style={[styles.cardActionButton, { backgroundColor: '#DC2626' }]} onPress={handleDelete}>
+              <Text style={styles.cardActionText}>Archivar</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity style={[styles.cardActionButton, { backgroundColor: '#3B82F6' }]} onPress={handleRestore}>
+              <Text style={styles.cardActionText}>Restaurar</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
-
-      <Text style={styles.userEmail}>Correo: {item.email}</Text>
-      <Text style={styles.userDetail}>
-        Documento: {item.documentType || 'CC'} - {item.documentNumber || 'Sin registrar'}
-      </Text>
-      <Text style={styles.userDetail}>Teléfono: {item.contactPhone || item.phone || 'Sin registrar'}</Text>
-    </View>
-  );
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -257,6 +371,78 @@ export const UsersScreen = () => {
                   disabled={saving}
                 >
                   {saving ? <ActivityIndicator color="#FFF" /> : <Text style={styles.saveButtonText}>Guardar Usuario</Text>}
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal de Edición de Usuario */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={editModalVisible}
+        onRequestClose={() => setEditModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <Text style={styles.modalTitle}>Editar Información de Usuario</Text>
+
+              <Text style={styles.inputLabel}>Nombre Completo *</Text>
+              <TextInput
+                style={styles.input}
+                value={editFullName}
+                onChangeText={setEditFullName}
+              />
+
+              <Text style={styles.inputLabel}>Correo Electrónico *</Text>
+              <TextInput
+                style={styles.input}
+                value={editEmail}
+                onChangeText={setEditEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+
+              <Text style={styles.inputLabel}>Teléfono de Contacto</Text>
+              <TextInput
+                style={styles.input}
+                value={editContactPhone}
+                onChangeText={setEditContactPhone}
+                keyboardType="phone-pad"
+              />
+
+              <Text style={styles.inputLabel}>Rol Asignado *</Text>
+              <View style={styles.pickerRow}>
+                {[Role.OPERATOR, Role.ADMIN_PARKING, Role.SUPER_ADMIN].map((r) => (
+                  <TouchableOpacity
+                    key={r}
+                    style={[styles.pickerOption, editRole === r && styles.selectedPickerOption]}
+                    onPress={() => setEditRole(r)}
+                  >
+                    <Text style={[styles.pickerText, editRole === r && styles.selectedPickerText]}>
+                      {r}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <View style={styles.modalActionRow}>
+                <TouchableOpacity
+                  style={styles.cancelButton}
+                  onPress={() => setEditModalVisible(false)}
+                >
+                  <Text style={styles.cancelButtonText}>Cancelar</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.saveButton}
+                  onPress={handleUpdateUser}
+                  disabled={saving}
+                >
+                  {saving ? <ActivityIndicator color="#FFF" /> : <Text style={styles.saveButtonText}>Actualizar Usuario</Text>}
                 </TouchableOpacity>
               </View>
             </ScrollView>
