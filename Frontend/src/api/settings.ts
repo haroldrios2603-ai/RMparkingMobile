@@ -2,22 +2,10 @@ import { apiClient } from './client';
 
 export const settingsApi = {
   /**
-   * Obtiene la configuración general del sistema junto con sedes y tarifas.
+   * Obtiene la configuración general del sistema.
    */
   getGeneralConfig: async () => {
-    const response = await apiClient.get('/settings');
-    return response.data;
-  },
-
-  /**
-   * Actualiza la configuración general (capacidad, minutos de cortesía, etc.).
-   */
-  updateGeneralConfig: async (config: {
-    capacidadTotal: number;
-    minutosCortesia?: number;
-    [key: string]: any;
-  }) => {
-    const response = await apiClient.put('/settings/general', config);
+    const response = await apiClient.get('/settings/general');
     return response.data;
   },
 
@@ -25,11 +13,7 @@ export const settingsApi = {
    * Guarda o actualiza tarifas de parqueadero.
    */
   updateTariffs: async (parkingId: string, tariffs: any[]) => {
-    const response = await apiClient.put('/settings/tarifas', {
-      aplicarATodos: false,
-      parkingId,
-      tarifas: tariffs,
-    });
+    const response = await apiClient.post(`/settings/tarifas/${parkingId}`, { tariffs });
     return response.data;
   },
 
@@ -42,9 +26,7 @@ export const settingsApi = {
     aceptaEnLinea: boolean;
     aceptaQr: boolean;
   }) => {
-    const response = await apiClient.put('/settings/metodos-pago', {
-      metodosPago: config,
-    });
+    const response = await apiClient.patch('/settings/metodos-pago', config);
     return response.data;
   },
 };

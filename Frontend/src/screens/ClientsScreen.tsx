@@ -122,59 +122,6 @@ export const ClientsScreen = () => {
     const estado = item.estado || item.status || 'ACTIVO';
     const isActivo = estado === 'ACTIVO' || estado === 'ACTIVE';
 
-    const handleRenew = async () => {
-      try {
-        const currentEnd = item.fechaFin || item.endDate ? new Date(item.fechaFin || item.endDate) : new Date();
-        const baseDate = currentEnd.getTime() > Date.now() ? currentEnd : new Date();
-        const newEndDate = new Date(baseDate.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
-        const paymentDate = new Date().toISOString();
-        const monthlyFee = item.montoMensual ?? item.monthlyFee ?? 180000;
-
-        await clientsApi.renewContract(item.id, {
-          newEndDate,
-          paymentDate,
-          monthlyFee,
-        });
-        Alert.alert('Contrato Renovado', 'Se ha renovado el contrato exitosamente por 30 días.');
-        fetchContracts();
-      } catch (error: any) {
-        Alert.alert('Error', error.response?.data?.message || 'No se pudo renovar el contrato.');
-      }
-    };
-
-    const handleDelete = async () => {
-      Alert.alert(
-        'Confirmar Archivo',
-        `¿Estás seguro de archivar el contrato de ${clientName}?`,
-        [
-          { text: 'Cancelar', style: 'cancel' },
-          {
-            text: 'Archivar',
-            style: 'destructive',
-            onPress: async () => {
-              try {
-                await clientsApi.deleteContract(item.id);
-                Alert.alert('Archivado', 'El contrato fue archivado exitosamente.');
-                fetchContracts();
-              } catch (error: any) {
-                Alert.alert('Error', error.response?.data?.message || 'No se pudo archivar el contrato.');
-              }
-            },
-          },
-        ]
-      );
-    };
-
-    const handleRestore = async () => {
-      try {
-        await clientsApi.restoreContract(item.id);
-        Alert.alert('Restaurado', 'El contrato fue restaurado exitosamente.');
-        fetchContracts();
-      } catch (error: any) {
-        Alert.alert('Error', error.response?.data?.message || 'No se pudo restaurar el contrato.');
-      }
-    };
-
     return (
       <View style={styles.contractCard}>
         <View style={styles.cardHeader}>
@@ -189,22 +136,6 @@ export const ClientsScreen = () => {
         <Text style={styles.dateText}>
           Vence: {item.fechaFin || item.endDate ? new Date(item.fechaFin || item.endDate).toLocaleDateString('es-CO') : 'Sin fecha'}
         </Text>
-
-        <View style={styles.cardActionsRow}>
-          <TouchableOpacity style={[styles.cardActionButton, { backgroundColor: '#4F46E5' }]} onPress={handleRenew}>
-            <Text style={styles.cardActionText}>Renovar (1M)</Text>
-          </TouchableOpacity>
-
-          {isActivo ? (
-            <TouchableOpacity style={[styles.cardActionButton, { backgroundColor: '#DC2626' }]} onPress={handleDelete}>
-              <Text style={styles.cardActionText}>Archivar</Text>
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity style={[styles.cardActionButton, { backgroundColor: '#3B82F6' }]} onPress={handleRestore}>
-              <Text style={styles.cardActionText}>Restaurar</Text>
-            </TouchableOpacity>
-          )}
-        </View>
       </View>
     );
   };
@@ -459,25 +390,6 @@ const styles = StyleSheet.create({
     borderColor: '#CBD5E1',
     borderRadius: 6,
     alignItems: 'center',
-  },
-  cardActionsRow: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 8,
-    marginTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
-    paddingTop: 8,
-  },
-  cardActionButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-  },
-  cardActionText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: 'bold',
   },
   selectedPickerOption: {
     backgroundColor: '#4F46E5',

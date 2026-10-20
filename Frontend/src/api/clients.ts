@@ -3,18 +3,10 @@ import { ClientContract } from '../types';
 
 export const clientsApi = {
   /**
-   * Obtiene la lista de contratos mensuales activos o con filtros.
+   * Obtiene la lista de contratos mensuales activos.
    */
-  listContracts: async (params?: any): Promise<ClientContract[]> => {
-    const response = await apiClient.get<ClientContract[]>('/clients/contracts', { params });
-    return response.data;
-  },
-
-  /**
-   * Obtiene alertas pendientes por vencimiento o pago.
-   */
-  listAlerts: async (): Promise<any[]> => {
-    const response = await apiClient.get<any[]>('/clients/contracts/alerts');
+  listContracts: async (): Promise<ClientContract[]> => {
+    const response = await apiClient.get<ClientContract[]>('/clients/contracts');
     return response.data;
   },
 
@@ -27,37 +19,12 @@ export const clientsApi = {
   },
 
   /**
-   * Actualiza los datos de un contrato existente.
+   * Renueva un contrato existente.
    */
-  updateContract: async (contractId: string, data: any): Promise<ClientContract> => {
-    const response = await apiClient.patch<ClientContract>(`/clients/contracts/${contractId}`, data);
-    return response.data;
-  },
-
-  /**
-   * Renueva un contrato existente utilizando RenewContractDto (newEndDate, paymentDate, monthlyFee).
-   */
-  renewContract: async (
-    contractId: string,
-    data: { newEndDate: string; paymentDate: string; monthlyFee?: number }
-  ): Promise<ClientContract> => {
-    const response = await apiClient.patch<ClientContract>(`/clients/contracts/${contractId}/renew`, data);
-    return response.data;
-  },
-
-  /**
-   * Archiva un contrato mensual.
-   */
-  deleteContract: async (contractId: string): Promise<any> => {
-    const response = await apiClient.delete(`/clients/contracts/${contractId}`);
-    return response.data;
-  },
-
-  /**
-   * Restaura un contrato archivado.
-   */
-  restoreContract: async (contractId: string): Promise<any> => {
-    const response = await apiClient.post(`/clients/contracts/${contractId}/restore`);
+  renewContract: async (contractId: string, meses: number): Promise<ClientContract> => {
+    const response = await apiClient.patch<ClientContract>(`/clients/contracts/${contractId}/renew`, {
+      meses,
+    });
     return response.data;
   },
 };

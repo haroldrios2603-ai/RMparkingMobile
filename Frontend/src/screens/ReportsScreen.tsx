@@ -6,8 +6,6 @@ import {
   ScrollView,
   RefreshControl,
   ActivityIndicator,
-  TouchableOpacity,
-  Alert,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { reportsApi } from '../api/reports';
@@ -19,7 +17,6 @@ import { reportsApi } from '../api/reports';
 export const ReportsScreen = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [exporting, setExporting] = useState(false);
   const [billingTotal, setBillingTotal] = useState<any>(null);
   const [vehicleCount, setVehicleCount] = useState<any>(null);
   const [incomeByVehicleList, setIncomeByVehicleList] = useState<any[]>([]);
@@ -28,7 +25,7 @@ export const ReportsScreen = () => {
     try {
       const [billingRes, vehiclesRes, incomeRes] = await Promise.all([
         reportsApi.getBillingTotal().catch(() => ({ totalFacturado: 0 })),
-        reportsApi.getVehicleCount({ period: 'day' }).catch(() => ({ totalVehiculos: 0 })),
+        reportsApi.getVehicleCount().catch(() => ({ totalVehiculos: 0 })),
         reportsApi.getIncomeByVehicle().catch(() => ({ desglose: [] })),
       ]);
 
@@ -56,45 +53,12 @@ export const ReportsScreen = () => {
     fetchReportsData();
   };
 
-  const handleExport = async (format: 'excel' | 'pdf' | 'csv') => {
-    setExporting(true);
-    try {
-      await reportsApi.exportReport({
-        reportType: 'facturacion-total',
-        format,
-      });
-      Alert.alert('Exportación Exitosa', `El reporte en formato ${format.toUpperCase()} se generó correctamente.`);
-    } catch (error: any) {
-      Alert.alert('Error de Exportación', error.response?.data?.message || 'No se pudo generar el archivo de reporte.');
-    } finally {
-      setExporting(false);
-    }
-  };
-
   return (
     <ScrollView
       style={styles.container}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
-      <View style={styles.headerRow}>
-        <Text style={styles.title}>Reportes y Métricas Operativas</Text>
-        <View style={styles.exportRow}>
-          <TouchableOpacity
-            style={styles.exportButton}
-            onPress={() => handleExport('excel')}
-            disabled={exporting}
-          >
-            <Text style={styles.exportButtonText}>📥 Excel</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.exportButton, { backgroundColor: '#059669' }]}
-            onPress={() => handleExport('csv')}
-            disabled={exporting}
-          >
-            <Text style={styles.exportButtonText}>📥 CSV</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+      <Text style={styles.title}>Reportes y Métricas Operativas</Text>
 
       {loading ? (
         <ActivityIndicator size="large" color="#6366F1" style={{ marginTop: 40 }} />
@@ -151,31 +115,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
     padding: 16,
   },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  exportRow: {
-    flexDirection: 'row',
-    gap: 6,
-  },
-  exportButton: {
-    backgroundColor: '#4F46E5',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  exportButtonText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
   title: {
     fontSize: 20,
     fontWeight: 'bold',
     color: '#0F172A',
+    marginBottom: 16,
   },
   kpiContainer: {
     flexDirection: 'row',

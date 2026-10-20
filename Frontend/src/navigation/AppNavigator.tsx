@@ -26,7 +26,6 @@ import { UsersScreen } from '../screens/UsersScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { AuditScreen } from '../screens/AuditScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
-import { PermissionsScreen } from '../screens/PermissionsScreen';
 
 const AuthStack = createStackNavigator();
 
@@ -38,8 +37,7 @@ type ScreenKey =
   | 'Users'
   | 'Settings'
   | 'Audit'
-  | 'Profile'
-  | 'Permissions';
+  | 'Profile';
 
 interface MenuItem {
   key: ScreenKey;
@@ -92,12 +90,6 @@ const MENU_ITEMS: MenuItem[] = [
     description: 'Trazabilidad y logs del sistema',
   },
   {
-    key: 'Permissions',
-    label: 'Permisos y Accesos',
-    iconName: 'key-outline',
-    description: 'Control de roles y pantallas protegidas',
-  },
-  {
     key: 'Profile',
     label: 'Mi Perfil de Usuario',
     iconName: 'person-circle-outline',
@@ -135,8 +127,6 @@ function ResponsiveMainLayout() {
         return <SettingsScreen />;
       case 'Audit':
         return <AuditScreen />;
-      case 'Permissions':
-        return <PermissionsScreen />;
       case 'Profile':
         return <ProfileScreen />;
       default:
