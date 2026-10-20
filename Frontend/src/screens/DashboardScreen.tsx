@@ -6,13 +6,14 @@ import {
   FlatList,
   RefreshControl,
   ActivityIndicator,
+  TextInput,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { parkingApi } from '../api/parking';
 import { TicketSummary } from '../types';
 
 /**
- * Formatea una fecha e calcula el tiempo transcurrido en el parqueadero.
+ * Formatea una fecha y calcula el tiempo transcurrido en el parqueadero.
  */
 const calculateTimeInfo = (entryDateString?: string) => {
   if (!entryDateString) {
@@ -57,7 +58,9 @@ export const DashboardScreen = () => {
   const [summary, setSummary] = useState<TicketSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [plateQuery, setPlateQuery] = useState('');
 
+  // Obtiene el resumen de aforo y vehículos activos desde el backend
   const fetchSummary = async () => {
     try {
       const data = await parkingApi.getResumenTickets();
@@ -80,6 +83,15 @@ export const DashboardScreen = () => {
     setRefreshing(true);
     fetchSummary();
   };
+
+  // Filtrado en vivo por placa de los vehículos activos estacionados
+  const activeTickets = summary?.activos || [];
+  const filteredActiveTickets = activeTickets.filter((item: any) => {
+    const q = plateQuery.toUpperCase().trim();
+    if (!q) return true;
+    const p = (item.vehicle?.plate || item.placa || '').toUpperCase();
+    return p.includes(q);
+  });
 
   const renderActiveTicketItem = ({ item }: { item: any }) => {
     const placa = item.vehicle?.plate || item.placa || 'SIN PLACA';
@@ -130,16 +142,26 @@ export const DashboardScreen = () => {
 
       <Text style={styles.sectionTitle}>Vehículos en Parqueadero</Text>
 
+      {/* Barra de Búsqueda Rápida por Placa */}
+      <TextInput
+        style={styles.searchInput}
+        value={plateQuery}
+        onChangeText={(text) => setPlateQuery(text.toUpperCase().trim())}
+        placeholder="Buscar vehículo por placa..."
+        placeholderTextColor="#94A3B8"
+        autoCapitalize="characters"
+      />
+
       {loading ? (
         <ActivityIndicator size="large" color="#6366F1" style={{ marginTop: 20 }} />
       ) : (
         <FlatList
-          data={summary?.activos || []}
+          data={filteredActiveTickets}
           keyExtractor={(item) => item.id}
           renderItem={renderActiveTicketItem}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           ListEmptyComponent={
-            <Text style={styles.emptyText}>No hay vehículos activos en este momento.</Text>
+            <Text style={styles.emptyText}>No hay vehículos activos que coincidan con la búsqueda.</Text>
           }
           contentContainerStyle={{ paddingBottom: 20 }}
         />
@@ -181,6 +203,17 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
+    color: '#0F172A',
+    marginBottom: 8,
+  },
+  searchInput: {
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 14,
+    backgroundColor: '#FFFFFF',
     color: '#0F172A',
     marginBottom: 12,
   },
