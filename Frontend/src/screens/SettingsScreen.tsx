@@ -21,6 +21,7 @@ import { parkingApi } from '../api/parking';
 export const SettingsScreen = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [parkings, setParkings] = useState<any[]>([]);
 
   // Parámetros Generales
   const [capacity, setCapacity] = useState('50');
@@ -44,12 +45,15 @@ export const SettingsScreen = () => {
   const [motoBaseRate, setMotoBaseRate] = useState('1000');
   const [motoHourlyRate, setMotoHourlyRate] = useState('1000');
 
+  // Carga la configuración general y la lista de sedes de parqueadero
   const fetchSettings = async () => {
     try {
       const [configData, parkingsList] = await Promise.all([
         settingsApi.getGeneralConfig().catch(() => null),
         parkingApi.getAllParkings().catch(() => []),
       ]);
+
+      setParkings(Array.isArray(parkingsList) ? parkingsList : []);
 
       if (configData) {
         const config = configData.configuracion || configData;
@@ -177,6 +181,36 @@ export const SettingsScreen = () => {
           {/* Tarifas de Parqueadero */}
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Tarifas por Tipo de Vehículo</Text>
+
+            {/* Selector de Sede Operativa */}
+            {parkings.length > 0 && (
+              <View style={{ marginBottom: 14 }}>
+                <Text style={styles.subSectionTitle}>Sede Seleccionada:</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 4 }}>
+                  <View style={{ flexDirection: 'row', gap: 6 }}>
+                    {parkings.map((p) => (
+                      <TouchableOpacity
+                        key={p.id}
+                        style={[
+                          styles.parkingChip,
+                          selectedParkingId === p.id && styles.selectedParkingChip,
+                        ]}
+                        onPress={() => setSelectedParkingId(p.id)}
+                      >
+                        <Text
+                          style={[
+                            styles.parkingChipText,
+                            selectedParkingId === p.id && styles.selectedParkingChipText,
+                          ]}
+                        >
+                          {p.nombre || p.name || 'Sede'}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </ScrollView>
+              </View>
+            )}
 
             <Text style={styles.subSectionTitle}>Automóvil (CAR)</Text>
             <View style={styles.inputRow}>
@@ -340,6 +374,26 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#4F46E5',
     marginBottom: 6,
+  },
+  parkingChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    backgroundColor: '#F8FAFC',
+  },
+  selectedParkingChip: {
+    backgroundColor: '#4F46E5',
+    borderColor: '#4F46E5',
+  },
+  parkingChipText: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    color: '#475569',
+  },
+  selectedParkingChipText: {
+    color: '#FFFFFF',
   },
   switchRow: {
     flexDirection: 'row',
