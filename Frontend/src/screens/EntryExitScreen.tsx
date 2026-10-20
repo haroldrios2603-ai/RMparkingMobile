@@ -174,6 +174,36 @@ export const EntryExitScreen = () => {
 
         {tab === 'ENTRY' ? (
           <>
+            {/* Selector de Sede Operativa de Parqueadero */}
+            {parkings.length > 0 && (
+              <View style={{ marginBottom: 16 }}>
+                <Text style={styles.inputLabel}>Sede de Parqueadero</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 4 }}>
+                  <View style={{ flexDirection: 'row', gap: 6 }}>
+                    {parkings.map((p) => (
+                      <TouchableOpacity
+                        key={p.id}
+                        style={[
+                          styles.parkingChip,
+                          selectedParkingId === p.id && styles.selectedParkingChip,
+                        ]}
+                        onPress={() => setSelectedParkingId(p.id)}
+                      >
+                        <Text
+                          style={[
+                            styles.parkingChipText,
+                            selectedParkingId === p.id && styles.selectedParkingChipText,
+                          ]}
+                        >
+                          {p.nombre || p.name || 'Sede'}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </ScrollView>
+              </View>
+            )}
+
             <Text style={styles.inputLabel}>Tipo de Vehículo</Text>
             <View style={styles.typeSelector}>
               {[
@@ -303,6 +333,26 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     backgroundColor: '#F8FAFC',
     color: '#0F172A',
+  },
+  parkingChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    backgroundColor: '#F8FAFC',
+  },
+  selectedParkingChip: {
+    backgroundColor: '#4F46E5',
+    borderColor: '#4F46E5',
+  },
+  parkingChipText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#475569',
+  },
+  selectedParkingChipText: {
+    color: '#FFFFFF',
   },
   typeSelector: {
     flexDirection: 'row',
